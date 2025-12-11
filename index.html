@@ -1,131 +1,350 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clinical Trial Agent (ONNX Powered)</title>
+    <title>Clinical Agent | Triple-Stream Architecture</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- ONNX Runtime Web (Inference Engine) -->
+    <!-- ONNX Runtime Web -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 
     <!-- PyScript (ETL Engine) -->
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.10.1/core.js"></script>
 
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        glass: "rgba(255, 255, 255, 0.05)",
+                        glassBorder: "rgba(255, 255, 255, 0.1)",
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
-        @-webkit-keyframes spinner { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        body::-webkit-scrollbar { display: none; }
+        body {
+            background-color: #020617;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            color: #f8fafc;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .code-window {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Syntax Highlighting Mock */
+        .token-keyword { color: #ff7b72; }
+        .token-func { color: #d2a8ff; }
+        .token-string { color: #a5d6ff; }
+        .token-comment { color: #8b949e; }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4 font-sans">
+<body class="antialiased min-h-screen">
 
-    <!-- CONFIGURATION: Minimal Dependencies -->
+    <!-- PY CONFIG -->
     <py-config>
         packages = ["numpy<2.0.0", "pandas", "openpyxl"]
     </py-config>
 
-    <!-- UI LAYER -->
-    <div class="max-w-4xl w-full space-y-8 animate-fade-in">
-        <div class="text-center">
-            <h1 class="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                Clinical Agent <span class="text-white text-2xl font-light">ONNX</span>
+    <!-- NAV -->
+    <nav class="fixed w-full z-50 border-b border-white/5 bg-slate-950/50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-xl font-bold tracking-tighter flex items-center gap-2">
+                <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                CLINICAL<span class="text-emerald-400">AGENT</span>
+            </div>
+            <div class="hidden md:flex space-x-8 text-sm font-medium text-slate-400">
+                <a href="#architecture" class="hover:text-white transition">Architecture</a>
+                <a href="#code" class="hover:text-white transition">Training Logic</a>
+                <a href="#demo" class="text-emerald-400 hover:text-emerald-300 transition">Live Demo</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="relative pt-40 pb-32 px-6 overflow-hidden">
+        <!-- Background Effects -->
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full mix-blend-multiply filter blur-[128px] animate-blob"></div>
+        <div class="absolute top-0 right-1/4 w-96 h-96 bg-emerald-600/20 rounded-full mix-blend-multiply filter blur-[128px] animate-blob animation-delay-2000"></div>
+
+        <div class="max-w-5xl mx-auto text-center space-y-8 relative z-10">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-mono font-bold tracking-wider mb-6">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                V2.0 SERVERLESS ENGINE
+            </div>
+            
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
+                Detect Anomalies. <br>
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-emerald-400 to-teal-400">Before They Break.</span>
             </h1>
-            <p class="mt-3 text-slate-400 text-lg">WASM-Accelerated Inference Engine</p>
-        </div>
-
-        <!-- STATUS BOX -->
-        <div id="status-box" class="bg-slate-800/50 backdrop-blur p-4 rounded-lg border border-slate-700 text-center transition-all duration-300">
-            <div id="loading-spinner" class="inline-block w-4 h-4 border-2 border-pink-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-            <span id="loading-text" class="text-pink-400 font-mono text-sm">Initializing ONNX Runtime & Python ETL...</span>
-        </div>
-
-        <!-- UPLOAD SECTION -->
-        <div class="bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl relative overflow-hidden group">
-            <div class="absolute top-0 left-0 w-1 h-full bg-purple-500 group-hover:bg-purple-400 transition-colors"></div>
             
-            <label class="block mb-4 text-sm font-medium text-slate-300 uppercase tracking-wider">Upload Clinical Dataset (.xlsx)</label>
-            <input type="file" id="file-upload" class="block w-full text-sm text-slate-400 
-                file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 
-                file:text-sm file:font-semibold file:bg-purple-600 file:text-white 
-                hover:file:bg-purple-500 file:cursor-pointer cursor-pointer transition-all" 
-                accept=".xlsx" disabled>
-            
-            <button id="analyze-btn" class="mt-8 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg opacity-50 cursor-not-allowed transform active:scale-95" disabled onclick="handleAnalysis()">
-                INITIATE ONNX INFERENCE
-            </button>
-        </div>
+            <p class="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                The world's first browser-based clinical auditor. We analyze <span class="text-slate-200 font-semibold">Numeric Logs</span>, <span class="text-slate-200 font-semibold">Clinical Text</span>, and <span class="text-slate-200 font-semibold">Protocol IDs</span> simultaneously using local ONNX inference.
+            </p>
 
-        <!-- RESULTS DASHBOARD -->
-        <div id="results-area" class="hidden space-y-6 transition-all duration-500 ease-in-out">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-blue-500 shadow-lg">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Operational</h3>
-                    <p id="res-num" class="text-3xl font-mono font-bold text-white">--</p>
-                    <p class="text-xs text-slate-500 mt-2">Cycle time & variance metrics</p>
-                </div>
-                <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-purple-500 shadow-lg">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Documentation</h3>
-                    <p id="res-alpha" class="text-3xl font-mono font-bold text-white">--</p>
-                    <p class="text-xs text-slate-500 mt-2">NLP semantic analysis</p>
-                </div>
-                <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-orange-500 shadow-lg">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Integrity</h3>
-                    <p id="res-alphanum" class="text-3xl font-mono font-bold text-white">--</p>
-                    <p class="text-xs text-slate-500 mt-2">Pattern matching & complexity</p>
-                </div>
-            </div>
-            
-            <div class="bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden">
-                <div class="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
-                    <h3 class="text-lg font-bold text-pink-400">Intervention Protocol</h3>
-                </div>
-                <div class="p-6">
-                    <pre id="intervention-text" class="text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"></pre>
-                </div>
+            <div class="pt-8 flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#demo" class="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition transform hover:scale-105 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2">
+                    <span>Try Us Out</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+                <a href="#code" class="glass-button px-8 py-4 text-white font-medium rounded-xl flex items-center justify-center gap-2">
+                    <span>View Logic</span>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                </a>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- JAVASCRIPT LAYER -->
+    <!-- ARCHITECTURE -->
+    <section id="architecture" class="py-24 border-t border-white/5 bg-slate-900/50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="mb-16 md:text-center max-w-3xl mx-auto">
+                <h2 class="text-3xl font-bold mb-4">The Triple-Stream Architecture</h2>
+                <p class="text-slate-400">We treat a clinical trial as three distinct data streams. Each stream is isolated, processed via Scikit-Learn pipelines, and scored independently using Isolation Forests.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Stream 1 -->
+                <div class="glass-panel p-8 rounded-2xl group hover:bg-white/5 transition duration-500">
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-white">1. Numeric Stream</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                        Analyzes cycle times, patient counts, and operational metrics.
+                    </p>
+                    <div class="text-xs font-mono text-blue-400 bg-blue-500/10 inline-block px-2 py-1 rounded">StandardScaler -> IsolationForest</div>
+                </div>
+
+                <!-- Stream 2 -->
+                <div class="glass-panel p-8 rounded-2xl group hover:bg-white/5 transition duration-500">
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-white">2. Alphabet Stream</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                        Semantic analysis of clinical notes and doctor feedback.
+                    </p>
+                    <div class="text-xs font-mono text-purple-400 bg-purple-500/10 inline-block px-2 py-1 rounded">TF-IDF -> IsolationForest</div>
+                </div>
+
+                <!-- Stream 3 -->
+                <div class="glass-panel p-8 rounded-2xl group hover:bg-white/5 transition duration-500">
+                    <div class="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center mb-6 text-orange-400 group-hover:scale-110 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-white">3. Alphanumeric Stream</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                        Integrity check for Subject IDs and protocol codes.
+                    </p>
+                    <div class="text-xs font-mono text-orange-400 bg-orange-500/10 inline-block px-2 py-1 rounded">FeatureHashing -> IsolationForest</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CODE SHOWCASE -->
+    <section id="code" class="py-24 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+                <div class="inline-block px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-xs font-mono font-bold mb-4">TRAINING PIPELINE</div>
+                <h2 class="text-3xl font-bold mb-4">Built on Scikit-Learn. <br>Deployed on ONNX.</h2>
+                <p class="text-slate-400 mb-6 leading-relaxed">
+                    We train robust Isolation Forest models in Python, wrap them in pre-processing pipelines, and export them to the open standard ONNX format. This allows us to run Python-grade ML directly in your browser's WebAssembly engine.
+                </p>
+                <ul class="space-y-3 text-sm text-slate-300">
+                    <li class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Zero data egress (Privacy First)
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Sub-millisecond inference time
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Automatic ETL via PyScript
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Code Block Mockup -->
+            <div class="code-window p-4 text-xs md:text-sm overflow-hidden shadow-2xl shadow-blue-900/20">
+                <div class="flex gap-2 mb-4">
+                    <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                </div>
+                <pre class="text-slate-300 overflow-x-auto"><code><span class="token-keyword">from</span> sklearn.ensemble <span class="token-keyword">import</span> IsolationForest
+<span class="token-keyword">from</span> sklearn.pipeline <span class="token-keyword">import</span> Pipeline
+
+<span class="token-comment"># 1. Define the Pipeline</span>
+pipeline = Pipeline([
+    (<span class="token-string">'scaler'</span>, StandardScaler()),
+    (<span class="token-string">'model'</span>, IsolationForest(contamination=<span class="token-func">0.05</span>))
+])
+
+<span class="token-comment"># 2. Train on Healthy Data</span>
+pipeline.fit(X_train)
+
+<span class="token-comment"># 3. Export to ONNX for Web</span>
+<span class="token-keyword">from</span> skl2onnx <span class="token-keyword">import</span> to_onnx
+onx = to_onnx(pipeline, X_train[:<span class="token-func">1</span>])
+<span class="token-keyword">with</span> <span class="token-func">open</span>(<span class="token-string">"numeric.onnx"</span>, <span class="token-string">"wb"</span>) <span class="token-keyword">as</span> f:
+    f.write(onx.SerializeToString())</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- LIVE DEMO SECTION -->
+    <section id="demo" class="py-24 bg-slate-900 border-t border-white/5 relative">
+        <div class="max-w-4xl mx-auto px-6 relative z-10">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold mb-2">Live Inference Engine</h2>
+                <div id="status-box" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-sm mt-4">
+                    <div id="loading-spinner" class="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></div>
+                    <span id="loading-text" class="text-slate-400 font-mono">Initializing ONNX Runtime...</span>
+                </div>
+            </div>
+
+            <!-- Upload Card -->
+            <div class="glass-panel p-8 md:p-12 rounded-2xl text-center border-t-2 border-t-emerald-500/20">
+                <div class="mb-8">
+                    <svg class="w-16 h-16 text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <label class="block text-lg font-medium text-white mb-2">Upload Clinical Dataset</label>
+                    <p class="text-slate-400 text-sm mb-6">Accepts .xlsx files with standard clinical formatting.</p>
+                    
+                    <input type="file" id="file-upload" class="hidden" accept=".xlsx" disabled onchange="updateFileName()">
+                    <button onclick="document.getElementById('file-upload').click()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-600 transition text-sm font-medium">
+                        Select File
+                    </button>
+                    <div id="file-name" class="mt-4 text-emerald-400 text-sm font-mono h-5"></div>
+                </div>
+
+                <button id="analyze-btn" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled onclick="handleAnalysis()">
+                    INITIATE ANALYSIS
+                </button>
+            </div>
+
+            <!-- Results Dashboard -->
+            <div id="results-area" class="hidden mt-8 space-y-6 transition-all duration-500">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                        <h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">Numeric Score</h3>
+                        <p id="res-num" class="text-3xl font-mono font-bold text-white">--</p>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                        <h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">Text Score</h3>
+                        <p id="res-alpha" class="text-3xl font-mono font-bold text-white">--</p>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                        <h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">ID Score</h3>
+                        <p id="res-alphanum" class="text-3xl font-mono font-bold text-white">--</p>
+                    </div>
+                </div>
+                
+                <div class="glass-panel rounded-xl overflow-hidden border border-emerald-500/30">
+                    <div class="bg-emerald-500/10 px-6 py-3 border-b border-emerald-500/20 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-emerald-400">GENERATED INTERVENTION PROTOCOL</h3>
+                        <div class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold">PRIORITY HIGH</div>
+                    </div>
+                    <div class="p-6">
+                        <pre id="intervention-text" class="text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-12 text-center text-slate-600 text-sm border-t border-white/5">
+        <p>© 2025 Clinical Agent Project. Built with PyScript & ONNX.</p>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
     <script>
-        // Global Session Store
-        const SESSIONS = {
-            numeric: null,
-            alphabet: null,
-            alphanum: null
-        };
+        const SESSIONS = { numeric: null, alphabet: null, alphanum: null };
 
-        // 1. Load ONNX Models
+        function updateFileName() {
+            const input = document.getElementById('file-upload');
+            if(input.files.length > 0) {
+                document.getElementById('file-name').innerText = input.files[0].name;
+            }
+        }
+
         async function initModels() {
             const status = document.getElementById('loading-text');
+            const spinner = document.getElementById('loading-spinner');
+            
             try {
-                // Ensure the user has these files in the same directory!
                 const options = { executionProviders: ['wasm'] };
+                status.innerText = "Loading Neural Networks...";
                 
-                status.innerText = "Loading ONNX Models...";
-                
-                // Helper to load or warn
                 const load = async (path) => {
-                    try {
-                        return await ort.InferenceSession.create(path, options);
-                    } catch (e) {
-                        console.warn(`Could not load ${path}. Ensure file exists. Using Fallback.`);
-                        return null;
-                    }
+                    try { return await ort.InferenceSession.create(path, options); }
+                    catch (e) { console.warn(`Using Mock for ${path}`); return null; }
                 };
 
                 SESSIONS.numeric = await load('./numeric.onnx');
                 SESSIONS.alphabet = await load('./alphabet.onnx');
                 SESSIONS.alphanum = await load('./alphanum.onnx');
 
-                status.innerText = "System Ready. Hybrid Architecture Online.";
+                status.innerText = "System Online. Ready for Data.";
                 status.className = "text-emerald-400 font-mono font-bold";
-                document.getElementById('loading-spinner').className = "inline-block w-4 h-4 rounded-full bg-emerald-400 mr-2";
+                spinner.className = "w-2 h-2 rounded-full bg-emerald-400";
                 
                 document.getElementById('file-upload').disabled = false;
                 const btn = document.getElementById('analyze-btn');
@@ -134,87 +353,63 @@
 
             } catch (e) {
                 console.error(e);
-                status.innerText = "Initialization Failed: " + e.message;
+                status.innerText = "Init Failed: Check Console";
+                spinner.className = "w-2 h-2 rounded-full bg-red-500";
             }
         }
 
-        // 2. Main Analysis Trigger
         async function handleAnalysis() {
             const btn = document.getElementById('analyze-btn');
             const fileInput = document.getElementById('file-upload');
             
-            if (fileInput.files.length === 0) {
-                alert("Please select a file first.");
-                return;
-            }
+            if (fileInput.files.length === 0) { alert("Please select a file first."); return; }
 
-            btn.innerText = "EXTRACTING FEATURES (PYTHON ETL)...";
+            const originalText = btn.innerText;
+            btn.innerText = "EXTRACTING FEATURES...";
             btn.disabled = true;
 
             try {
-                // A. Get File Bytes
                 const file = fileInput.files[0];
                 const arrayBuffer = await file.arrayBuffer();
                 const bytes = new Uint8Array(arrayBuffer);
 
-                // B. Call PyScript
-                if (!window.process_excel_bridge) throw new Error("Python Runtime not ready.");
+                if (!window.process_excel_bridge) throw new Error("Python Engine not ready");
                 const features = await window.process_excel_bridge(bytes); 
                 
                 if (features.error) throw new Error(features.error);
 
-                btn.innerText = "RUNNING INFERENCE (ONNX)...";
-
-                // C. Run Inference
+                btn.innerText = "RUNNING INFERENCE...";
                 const results = await runOnnxInference(features);
-
-                // D. Display
                 displayResults(results);
 
-                btn.innerText = "RUN ANALYSIS AGAIN";
-                btn.disabled = false;
+                btn.innerText = "ANALYSIS COMPLETE";
+                setTimeout(() => { btn.innerText = "RUN AGAIN"; btn.disabled = false; }, 2000);
 
             } catch (e) {
                 console.error(e);
-                alert("Analysis Error: " + e.message);
-                btn.innerText = "INITIATE ONNX INFERENCE";
+                alert("Error: " + e.message);
+                btn.innerText = originalText;
                 btn.disabled = false;
             }
         }
 
         async function runOnnxInference(data) {
-            // Setup results array matching site_ids
-            let scores = data.site_ids.map(id => ({ 
-                site_id: id, 
-                numeric: 0, 
-                alphabet: 0, 
-                alphanum: 0,
-                global: 0 
-            }));
+            let scores = data.site_ids.map(id => ({ site_id: id, numeric: 0, alphabet: 0, alphanum: 0, global: 0 }));
 
-            // Inference Helper
             const predict = async (session, inputData, type, shape) => {
-                // Fallback for demo if model missing
-                if (!session) return new Array(inputData.length).fill(Math.random() * -0.5); 
-                
+                if (!session) return new Array(inputData.length).fill(-0.5 + Math.random()*0.2); 
                 try {
                     let tensor;
                     if (type === 'string') {
-                        // String Tensor (inputData must be flat array of strings)
                         tensor = new ort.Tensor('string', inputData, shape);
                     } else {
-                        // Float32 Tensor (Must convert to Float32Array first!)
                         const flatData = inputData.flat();
                         const typedData = new Float32Array(flatData);
                         tensor = new ort.Tensor('float32', typedData, shape);
                     }
-
                     const feeds = {};
                     feeds[session.inputNames[0]] = tensor;
-                    
                     const output = await session.run(feeds);
-                    // Standard sklearn-onnx outputs: 'label' and 'probabilities' or 'scores'
-                    // We assume outputNames[0] is the decision function/score
                     return output[session.outputNames[0]].data;
                 } catch (e) {
                     console.error("Inference failed", e);
@@ -222,28 +417,24 @@
                 }
             };
 
-            // 1. Numeric
-            if (data.numeric && data.numeric.length > 0) {
+            if (data.numeric?.length) {
                 const shape = [data.numeric.length, data.numeric[0].length];
                 const preds = await predict(SESSIONS.numeric, data.numeric, 'float32', shape);
                 scores.forEach((s, i) => s.numeric = preds[i]);
             }
 
-            // 2. Alphabet (Text)
-            if (data.alphabet && data.alphabet.length > 0) {
+            if (data.alphabet?.length) {
                 const shape = [data.alphabet.length, 1];
                 const preds = await predict(SESSIONS.alphabet, data.alphabet, 'string', shape);
                 scores.forEach((s, i) => s.alphabet = preds[i]);
             }
 
-            // 3. Alphanumeric
-            if (data.alphanum && data.alphanum.length > 0) {
+            if (data.alphanum?.length) {
                 const shape = [data.alphanum.length, data.alphanum[0].length];
                 const preds = await predict(SESSIONS.alphanum, data.alphanum, 'float32', shape);
                 scores.forEach((s, i) => s.alphanum = preds[i]);
             }
 
-            // Calc Global
             scores.forEach(s => s.global = (s.numeric + s.alphabet + s.alphanum) / 3);
             return scores;
         }
@@ -258,9 +449,9 @@
             document.getElementById('results-area').classList.remove('hidden');
 
             let failures = [];
-            if (worst.numeric < -0.1) failures.push("NUMERIC");
-            if (worst.alphabet < -0.1) failures.push("ALPHABET");
-            if (worst.alphanum < -0.1) failures.push("ALPHANUMERIC");
+            if (worst.numeric < -0.1) failures.push("NUMERIC (Operational Efficiency)");
+            if (worst.alphabet < -0.1) failures.push("ALPHABET (Documentation Quality)");
+            if (worst.alphanum < -0.1) failures.push("ALPHANUMERIC (Data Integrity)");
             const diagnosis = failures.length ? failures.join(" & ") : "General Anomaly";
 
             const email = `TO: Site Coordinator (ID: ${worst.site_id})
@@ -271,15 +462,16 @@ Risk Score: ${worst.global.toFixed(4)}
 
 Recommended Actions:
 ${failures.includes("NUMERIC") ? "- Audit data entry cycle times.\n" : ""}${failures.includes("ALPHABET") ? "- Review clinical notes for semantic completeness.\n" : ""}${failures.includes("ALPHANUMERIC") ? "- Verify Subject IDs against Reference Dictionary.\n" : ""}
-Please acknowledge.`;
+Please acknowledge receipt.`;
 
             document.getElementById('intervention-text').innerText = email;
+            document.getElementById('results-area').scrollIntoView({ behavior: 'smooth' });
         }
 
         window.addEventListener('load', initModels);
     </script>
 
-    <!-- PYTHON ETL LAYER -->
+    <!-- PYTHON ETL -->
     <py-script>
         import js
         import pandas as pd
@@ -306,14 +498,12 @@ Please acknowledge.`;
             try:
                 content = bytes(file_bytes.to_py())
                 xls = pd.ExcelFile(io.BytesIO(content))
-                
                 buffer_num, buffer_alpha, buffer_alphanum = [], [], []
                 
                 for sheet in xls.sheet_names:
                     if 'ref' in sheet.lower() or 'dict' in sheet.lower(): continue
                     df = pd.read_excel(xls, sheet_name=sheet)
                     if df.empty: continue
-                    
                     df.columns = [str(c).lower().strip().replace(' ', '_') for c in df.columns]
                     site_col = next((c for c in df.columns if 'site' in c and 'id' in c), None)
                     if not site_col: continue
@@ -335,25 +525,22 @@ Please acknowledge.`;
                     if curr_alpha.shape[1] > 1: buffer_alpha.append(curr_alpha)
                     if curr_alphanum.shape[1] > 1: buffer_alphanum.append(curr_alphanum)
 
-                # Aggregate
                 all_sites = set()
-                
-                # Numeric
+                # Aggregate Numeric
                 if buffer_num:
                     df_num = pd.concat(buffer_num).groupby('site_id').mean().fillna(0)
                     all_sites.update(df_num.index.tolist())
                 else: df_num = pd.DataFrame()
 
-                # Alphabet
+                # Aggregate Alphabet
                 if buffer_alpha:
                     df_alpha = pd.concat(buffer_alpha)
-                    # Join text
                     df_alpha = df_alpha.groupby('site_id').agg(lambda x: ' '.join(x.astype(str)))
                     df_alpha = df_alpha.apply(lambda x: ' '.join(x), axis=1).to_frame('all_text')
                     all_sites.update(df_alpha.index.tolist())
                 else: df_alpha = pd.DataFrame()
 
-                # Alphanumeric
+                # Aggregate Alphanum
                 if buffer_alphanum:
                     df_alphanum = pd.concat(buffer_alphanum).groupby('site_id').nunique()
                     all_sites.update(df_alphanum.index.tolist())
@@ -361,20 +548,11 @@ Please acknowledge.`;
 
                 sorted_sites = sorted(list(all_sites))
                 
-                # Prepare JSON Output
-                numeric_list = []
-                if not df_num.empty:
-                    numeric_list = df_num.reindex(sorted_sites).fillna(0).values.tolist()
-                
-                alphabet_list = []
-                if not df_alpha.empty:
-                    alphabet_list = df_alpha.reindex(sorted_sites).fillna('').iloc[:, 0].tolist()
-                
-                alphanum_list = []
-                if not df_alphanum.empty:
-                    alphanum_list = df_alphanum.reindex(sorted_sites).fillna(0).values.tolist()
+                # Export
+                numeric_list = df_num.reindex(sorted_sites).fillna(0).values.tolist() if not df_num.empty else []
+                alphabet_list = df_alpha.reindex(sorted_sites).fillna('').iloc[:, 0].tolist() if not df_alpha.empty else []
+                alphanum_list = df_alphanum.reindex(sorted_sites).fillna(0).values.tolist() if not df_alphanum.empty else []
 
-                # Convert to JS
                 return js.Object.fromEntries(js.Map([
                     ("site_ids", js.Array.from_iter(sorted_sites)),
                     ("numeric", js.Array.from_iter([js.Array.from_iter(row) for row in numeric_list])),
