@@ -64,11 +64,13 @@
         <div class="subtitle">Real-Time Analytics with Human-in-the-Loop Learning</div>
     </div>
 
-    <!-- UPLOAD -->
+    <!-- UPLOAD (MODIFIED: Added Click support) -->
     <div class="drop-zone" id="dropZone">
         <i class="fas fa-cloud-upload-alt icon-large"></i>
-        <h3>Drag & Drop Clinical Data Stream</h3>
+        <h3>Click or Drag & Drop Clinical Data Stream</h3>
         <p style="color: #64748b; font-size: 0.9em;">Supports .xlsx / .csv</p>
+        <!-- HIDDEN INPUT -->
+        <input type="file" id="fileInput" style="display: none;" accept=".csv, .xlsx">
     </div>
 
     <!-- STATUS -->
@@ -106,9 +108,9 @@
 <script>
     // --- 1. CONFIGURATION ---
     const firebaseConfig = {
-        apiKey: "AIzaSyCOrb15cWf-0j4q3EYmpgChVIANQh-Eok0", // <--- Still need this
+        apiKey: "AIzaSyCOrb15cWf-0j4q3EYmpgChVIANQh-Eok0",
         authDomain: "hackathons-8f113.firebaseapp.com",
-        databaseURL: "https://hackathons-8f113-default-rtdb.firebaseio.com/", // <--- YOUR NEW URL
+        databaseURL: "https://hackathons-8f113-default-rtdb.firebaseio.com/",
         projectId: "hackathons-8f113",
         storageBucket: "hackathons-8f113.firebasestorage.app",
         messagingSenderId: "682635562372",
@@ -127,12 +129,25 @@
     const db = firebase.database();
     let currentStreamKey = null;
 
-    // --- 2. DRAG & DROP ---
+    // --- 2. DRAG & DROP + CLICK LOGIC ---
     const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    // Click to Open
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // File Input Change
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) processFile(file);
+    });
+
+    // Drag Events
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+    dropZone.addEventListener('dragleave', (e) => { e.stopPropagation(); dropZone.classList.remove('active'); });
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // Stop bubbling
         dropZone.classList.remove('active');
         const file = e.dataTransfer.files[0];
         if (file) processFile(file);
@@ -144,6 +159,17 @@
             alert("CONFIG ERROR: You have not pasted your API Key in line 119 of index.html!");
             return;
         }
+
+        // --- DEBUG: CONNECTION TRAP ---
+        // Checks if we are actually reaching the server
+        console.log("Checking DB Connection...");
+        db.ref(".info/connected").on("value", snap => {
+            if (snap.val() === true) {
+                console.log("✅ Firebase Connected: TRUE");
+            } else {
+                console.warn("⚠️ Firebase Connected: FALSE (Check Database URL or Internet)");
+            }
+        });
 
         updateStatus('processing', 'Ingesting...', 'Parsing and syncing to Cloud...');
         
@@ -159,7 +185,7 @@
                 });
 
                 // PUSH TO DB
-                console.log("Pushing to Firebase...");
+                console.log("Attempting Push to Firebase...");
                 const streamRef = db.ref('clinical_streams').push();
                 currentStreamKey = streamRef.key;
                 
