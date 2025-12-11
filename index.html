@@ -124,7 +124,7 @@
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                V2.0 SERVERLESS ENGINE
+                V2.1 STABLE ENGINE
             </div>
             
             <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
@@ -374,8 +374,12 @@ onx = to_onnx(pipeline, X_train[:<span class="token-func">1</span>])
                 const bytes = new Uint8Array(arrayBuffer);
 
                 if (!window.process_excel_bridge) throw new Error("Python Engine not ready");
-                const features = await window.process_excel_bridge(bytes); 
                 
+                // --- CRITICAL FIX: Convert Proxy to JS Object safely ---
+                const featuresProxy = await window.process_excel_bridge(bytes); 
+                const features = featuresProxy.toJs({dict_converter: Object.fromEntries});
+                // -----------------------------------------------------
+
                 if (features.error) throw new Error(features.error);
 
                 btn.innerText = "RUNNING INFERENCE...";
@@ -529,7 +533,8 @@ Please acknowledge receipt.`;
                 # Aggregate Numeric
                 if buffer_num:
                     df_num = pd.concat(buffer_num).groupby('site_id').mean().fillna(0)
-                    all_sites.update(df_num.index.tolist())
+                    # FIX: Force String Type for index
+                    all_sites.update(df_num.index.astype(str).tolist())
                 else: df_num = pd.DataFrame()
 
                 # Aggregate Alphabet
@@ -537,15 +542,16 @@ Please acknowledge receipt.`;
                     df_alpha = pd.concat(buffer_alpha)
                     df_alpha = df_alpha.groupby('site_id').agg(lambda x: ' '.join(x.astype(str)))
                     df_alpha = df_alpha.apply(lambda x: ' '.join(x), axis=1).to_frame('all_text')
-                    all_sites.update(df_alpha.index.tolist())
+                    all_sites.update(df_alpha.index.astype(str).tolist())
                 else: df_alpha = pd.DataFrame()
 
                 # Aggregate Alphanum
                 if buffer_alphanum:
                     df_alphanum = pd.concat(buffer_alphanum).groupby('site_id').nunique()
-                    all_sites.update(df_alphanum.index.tolist())
+                    all_sites.update(df_alphanum.index.astype(str).tolist())
                 else: df_alphanum = pd.DataFrame()
 
+                # FIX: Sort string version of sites
                 sorted_sites = sorted(list(all_sites))
                 
                 # Export
@@ -553,15 +559,16 @@ Please acknowledge receipt.`;
                 alphabet_list = df_alpha.reindex(sorted_sites).fillna('').iloc[:, 0].tolist() if not df_alpha.empty else []
                 alphanum_list = df_alphanum.reindex(sorted_sites).fillna(0).values.tolist() if not df_alphanum.empty else []
 
-                return js.Object.fromEntries(js.Map([
-                    ("site_ids", js.Array.from_iter(sorted_sites)),
-                    ("numeric", js.Array.from_iter([js.Array.from_iter(row) for row in numeric_list])),
-                    ("alphabet", js.Array.from_iter(alphabet_list)),
-                    ("alphanum", js.Array.from_iter([js.Array.from_iter(row) for row in alphanum_list]))
-                ]))
+                # FIX: Return pure Python dict, let toJs handle conversion
+                return {
+                    "site_ids": sorted_sites,
+                    "numeric": numeric_list,
+                    "alphabet": alphabet_list,
+                    "alphanum": alphanum_list
+                }
 
             except Exception as e:
-                return js.Object.fromEntries(js.Map([("error", str(e))]))
+                return {"error": str(e)}
 
         js.window.process_excel_bridge = create_proxy(process_excel_py)
     </py-script>
