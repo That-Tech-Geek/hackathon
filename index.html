@@ -371,6 +371,9 @@ onx = to_onnx(pipeline, X_train, target_opset=<span class="text-purple-400">12</
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
+        // Configure ONNX Runtime Logging to suppress warnings
+        ort.env.logLevel = 'error';
+
         // --- 1. SCROLL ANIMATION OBSERVER ---
         const observerOptions = {
             threshold: 0.1,
@@ -553,14 +556,15 @@ Please acknowledge receipt.`;
 
     <!-- PYTHON ETL -->
     <py-script>
+        import warnings
+        # Suppress warnings (especially the Pandas/Pyarrow deprecation notice)
+        warnings.filterwarnings('ignore')
+
         import js
         import pandas as pd
         import numpy as np
         import io
-        import warnings
         from pyodide.ffi import create_proxy
-
-        warnings.filterwarnings('ignore')
 
         def detect_and_route(series):
             clean = series.dropna().astype(str)
