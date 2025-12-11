@@ -5,183 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>hAIlth - Command Center</title>
     
-    <!-- 1. FIREBASE SDKs (Compat version for Realtime DB) -->
+    <!-- FIREBASE SDKs (Compat v9) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <!-- Note: Firestore SDK removed, Database SDK added -->
     
-    <!-- 2. SHEETJS (Parses Excel in browser) -->
+    <!-- SHEETJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    <!-- 3. FONT AWESOME (Icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        :root { 
-            --primary: #0f172a; 
-            --accent: #3b82f6; 
-            --accent-glow: rgba(59, 130, 246, 0.5);
-            --success: #10b981; 
-            --bg: #f1f5f9; 
-            --card-bg: #ffffff;
-            --text-main: #334155;
-            --text-sub: #64748b;
-        }
-
-        body { 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            background: var(--bg); 
-            color: var(--primary); 
-            margin: 0; 
-            padding: 40px 20px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh; 
-        }
-        
-        .container { 
-            width: 100%; 
-            max-width: 850px; 
-            animation: fadeIn 0.5s ease-out;
-        }
+        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; --card-bg: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--primary); margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 850px; animation: fadeIn 0.5s ease-out; }
 
         /* HEADER */
         .header { text-align: center; margin-bottom: 40px; }
-        h1 { font-weight: 800; font-size: 2.5rem; margin: 0; letter-spacing: -1px; color: var(--primary); }
-        .subtitle { color: var(--text-sub); font-size: 1.1rem; margin-top: 5px; }
+        h1 { font-weight: 800; font-size: 2.5rem; margin: 0; letter-spacing: -1px; }
         .tag { background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; vertical-align: middle; margin-left: 10px; }
 
         /* DROP ZONE */
-        .drop-zone {
-            border: 2px dashed #cbd5e1; 
-            border-radius: 16px; 
-            padding: 60px 20px; 
-            text-align: center;
-            background: var(--card-bg); 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            position: relative;
-            overflow: hidden;
-        }
-        .drop-zone:hover { 
-            border-color: var(--accent); 
-            transform: translateY(-2px); 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-        .drop-zone.active { 
-            border-color: var(--success); 
-            background: #f0fdf4; 
-            transform: scale(1.02);
-        }
-        .icon-large { font-size: 3rem; color: #94a3b8; margin-bottom: 15px; transition: color 0.3s; }
-        .drop-zone:hover .icon-large { color: var(--accent); }
+        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 60px 20px; text-align: center; background: var(--card-bg); transition: all 0.3s; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .drop-zone:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .drop-zone.active { border-color: var(--success); background: #f0fdf4; }
+        .icon-large { font-size: 3rem; color: #94a3b8; margin-bottom: 15px; }
 
         /* STATUS CARD */
-        .status-card {
-            margin-top: 25px; 
-            background: var(--card-bg); 
-            border-radius: 12px; 
-            padding: 25px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
-            display: none; 
-            border-left: 6px solid #cbd5e1;
-            animation: slideUp 0.4s ease-out;
-        }
+        .status-card { margin-top: 25px; background: var(--card-bg); border-radius: 12px; padding: 25px; display: none; border-left: 6px solid #cbd5e1; animation: slideUp 0.4s; }
         .status-card.processing { border-color: var(--accent); }
         .status-card.success { border-color: var(--success); }
-
-        .status-header { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; }
+        .status-card.error { border-color: var(--danger); }
+        .status-header { display: flex; align-items: center; gap: 15px; }
         .status-title { font-weight: 700; font-size: 1.2rem; margin: 0; }
-        .status-desc { color: var(--text-sub); margin: 0; font-size: 0.95rem; }
-
-        /* SPINNER */
-        .spinner { 
-            display: inline-block; 
-            width: 24px; 
-            height: 24px; 
-            border: 3px solid rgba(59, 130, 246, 0.3); 
-            border-radius: 50%; 
-            border-top-color: var(--accent); 
-            animation: spin 1s linear infinite; 
-        }
+        .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(59, 130, 246, 0.3); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* AGENT RESPONSE BOX */
-        .agent-box {
-            margin-top: 25px; 
-            background: #1e293b; 
-            color: #e2e8f0; 
-            padding: 30px;
-            border-radius: 12px; 
-            font-family: 'Courier New', monospace; 
-            white-space: pre-wrap;
-            display: none; 
-            border: 1px solid #334155;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-            position: relative;
-            line-height: 1.6;
-        }
-        .agent-header { 
-            color: var(--success); 
-            font-weight: bold; 
-            margin-bottom: 15px; 
-            display: block; 
-            border-bottom: 1px solid #334155; 
-            padding-bottom: 10px;
-            font-size: 0.9rem;
-            letter-spacing: 1px;
-        }
-        .agent-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--success);
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
+        /* AGENT BOX */
+        .agent-box { margin-top: 25px; background: #1e293b; color: #e2e8f0; padding: 30px; border-radius: 12px; font-family: 'Courier New', monospace; display: none; border: 1px solid #334155; position: relative; }
+        .agent-header { color: var(--success); font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 10px; display: block; margin-bottom: 15px; }
+        
+        /* FEEDBACK UI (REWARD FUNCTION) */
+        .feedback-actions { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #475569; display: flex; gap: 10px; align-items: center; }
+        .feedback-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-approve { background: #064e3b; color: #34d399; }
+        .btn-approve:hover { background: #065f46; }
+        .btn-reject { background: #450a0a; color: #f87171; }
+        .btn-reject:hover { background: #7f1d1d; }
 
-        /* ANIMATIONS */
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1>hAIlth <span class="tag">AGENTIC V1.0</span></h1>
-        <div class="subtitle">Triple-Stream Real-Time Analytics Dashboard</div>
+        <h1>hAIlth <span class="tag">CI/CD ENABLED</span></h1>
+        <div class="subtitle">Real-Time Analytics with Human-in-the-Loop Learning</div>
     </div>
 
-    <!-- UPLOAD SECTION -->
+    <!-- UPLOAD -->
     <div class="drop-zone" id="dropZone">
         <i class="fas fa-cloud-upload-alt icon-large"></i>
-        <h3 style="margin: 0; color: var(--text-main);">Drag & Drop Clinical Data Stream</h3>
-        <p style="color: var(--text-sub); margin-top: 10px; font-size: 0.9em;">Supports .xlsx files with multiple tabs (Reference, Labs, Logs)</p>
+        <h3>Drag & Drop Clinical Data Stream</h3>
+        <p style="color: #64748b; font-size: 0.9em;">Supports .xlsx / .csv</p>
     </div>
 
-    <!-- LIVE STATUS SECTION -->
+    <!-- STATUS -->
     <div class="status-card" id="statusCard">
         <div class="status-header">
             <div id="statusIcon"></div>
             <div>
                 <h3 class="status-title" id="statusTitle">Processing...</h3>
-                <p class="status-desc" id="statusDesc">Uploading data to secure cloud pipeline...</p>
+                <p id="statusDesc" style="margin:0; color:#64748b;">Initializing...</p>
             </div>
         </div>
     </div>
 
-    <!-- THE AGENT RESPONSE (Hidden until AI runs) -->
+    <!-- AGENT RESULT -->
     <div class="agent-box" id="agentResult">
-        <span class="agent-header">>>> INCOMING SECURE TRANSMISSION // AGENT INTERVENTION PROTOCOL</span>
-        <span class="agent-badge">LIVE</span>
+        <span class="agent-header">>>> AGENT INTERVENTION PROTOCOL</span>
         <div id="agentText"></div>
+        
+        <!-- REWARD FUNCTION UI -->
+        <div class="feedback-actions" id="feedbackUI">
+            <span class="feedback-label">Rate this intervention:</span>
+            <button class="btn btn-approve" onclick="submitReward(1)">
+                <i class="fas fa-thumbs-up"></i> Accurate
+            </button>
+            <button class="btn btn-reject" onclick="submitReward(0)">
+                <i class="fas fa-thumbs-down"></i> False Positive
+            </button>
+        </div>
+        <div id="feedbackStatus" style="color: #94a3b8; font-size: 0.8em; margin-top: 10px; display:none;">
+            <i>Feedback captured. Adjusting model weights...</i>
+        </div>
     </div>
 </div>
 
@@ -197,140 +115,140 @@
         appId: "1:682635562372:web:e5cac66a90f5fce2a5e1d1"
     };
 
-    // Initialize Firebase
+    // Initialize Firebase with Error Checking
     if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+            alert("Firebase Init Failed. Check Config in Source Code.");
+        }
     }
-    // SWITCH TO REALTIME DATABASE
     const db = firebase.database();
+    let currentStreamKey = null;
 
-    // --- 2. DRAG & DROP LOGIC ---
+    // --- 2. DRAG & DROP ---
     const dropZone = document.getElementById('dropZone');
-
-    dropZone.addEventListener('dragover', (e) => { 
-        e.preventDefault(); 
-        dropZone.classList.add('active'); 
-    });
-    
-    dropZone.addEventListener('dragleave', () => { 
-        dropZone.classList.remove('active'); 
-    });
-    
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.classList.remove('active');
         const file = e.dataTransfer.files[0];
-        if (file) {
-            // Check file extension
-            if(file.name.endsWith('.xlsx') || file.name.endsWith('.csv')) {
-                processFile(file);
-            } else {
-                alert("Invalid file type. Please upload .xlsx or .csv");
-            }
-        }
+        if (file) processFile(file);
     });
 
-    // --- 3. EXCEL PARSING & UPLOAD (REALTIME DB) ---
+    // --- 3. UPLOAD LOGIC ---
     async function processFile(file) {
-        // UI Update: Processing
-        const card = document.getElementById('statusCard');
-        card.style.display = 'block';
-        card.className = 'status-card processing';
-        
-        document.getElementById('statusIcon').innerHTML = '<span class="spinner"></span>';
-        document.getElementById('statusTitle').innerText = 'Ingesting Data Stream...';
-        document.getElementById('statusDesc').innerText = 'Parsing Excel sheets and synchronizing with Realtime DB...';
-        
-        // Hide previous results
-        document.getElementById('agentResult').style.display = 'none';
+        if(firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
+            alert("CONFIG ERROR: You have not pasted your API Key in line 119 of index.html!");
+            return;
+        }
+
+        updateStatus('processing', 'Ingesting...', 'Parsing and syncing to Cloud...');
         
         const reader = new FileReader();
-        
         reader.onload = async (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            
-            // Build the Payload
-            let payload = {};
-            workbook.SheetNames.forEach(sheetName => {
-                const worksheet = workbook.Sheets[sheetName];
-                // Convert sheet to JSON
-                payload[sheetName] = XLSX.utils.sheet_to_json(worksheet);
-            });
-
-            // Upload to REALTIME DATABASE (db.ref instead of collection)
             try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                let payload = {};
+                workbook.SheetNames.forEach(sheet => {
+                    payload[sheet] = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
+                });
+
+                // PUSH TO DB
+                console.log("Pushing to Firebase...");
                 const streamRef = db.ref('clinical_streams').push();
+                currentStreamKey = streamRef.key;
                 
                 await streamRef.set({
                     meta_filename: file.name,
                     upload_timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    status: "PENDING_REVIEW", // This triggers the Python Agent
+                    status: "PENDING_REVIEW",
                     data_payload: payload
                 });
 
-                console.log("Data pushed with Key: ", streamRef.key);
-                
-                // Update UI: Waiting for AI
-                document.getElementById('statusTitle').innerText = 'AI Agent Active';
-                document.getElementById('statusDesc').innerText = 'Triple-Stream Analysis in progress. Waiting for intervention...';
-                
-                // START LISTENING FOR RESPONSE (REALTIME DB)
-                listenForAgent(streamRef.key);
+                console.log("Uploaded Key:", currentStreamKey);
+                updateStatus('processing', 'AI Agent Active', 'Waiting for intervention protocol...');
+                listenForAgent(currentStreamKey);
 
             } catch (error) {
-                console.error("Error pushing data: ", error);
-                document.getElementById('statusCard').className = 'status-card';
-                document.getElementById('statusTitle').innerText = 'Upload Failed';
-                document.getElementById('statusDesc').innerText = 'Check console for permission/config errors.';
-                document.getElementById('statusIcon').innerHTML = '<i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 24px;"></i>';
+                console.error("Upload Error Full:", error);
+                let msg = "Check Console (F12) for details.";
+                if (error.code === 'PERMISSION_DENIED') msg = "Database Rules prevent writing. Set .write: true in Console.";
+                updateStatus('error', 'Upload Failed', msg);
             }
         };
-        
         reader.readAsArrayBuffer(file);
     }
 
-    // --- 4. REAL-TIME LISTENER (REALTIME DB) ---
-    function listenForAgent(streamKey) {
-        const streamRef = db.ref('clinical_streams/' + streamKey);
-        
-        // Use 'value' listener for Realtime DB
-        const listener = streamRef.on('value', (snapshot) => {
+    // --- 4. LISTENER ---
+    function listenForAgent(key) {
+        const ref = db.ref('clinical_streams/' + key);
+        ref.on('value', (snapshot) => {
             const data = snapshot.val();
-            
-            // Check if status changed to PROCESSED
-            if (data && data.status === "PROCESSED" && data.agent_analysis) {
+            // Check if processed
+            if (data && data.status === "PROCESSED") {
+                updateStatus('success', 'Analysis Complete', 'Protocol Generated.');
                 
-                // UI Success State
-                document.getElementById('statusCard').className = 'status-card success';
-                document.getElementById('statusIcon').innerHTML = '<i class="fas fa-check-circle" style="color: #10b981; font-size: 24px;"></i>';
-                document.getElementById('statusTitle').innerText = 'Analysis Complete';
-                document.getElementById('statusDesc').innerText = 'Intervention Protocol Generated.';
+                document.getElementById('agentResult').style.display = 'block';
+                document.getElementById('feedbackUI').style.display = 'flex';
+                document.getElementById('feedbackStatus').style.display = 'none';
                 
-                // Show the Email
-                const agentBox = document.getElementById('agentResult');
-                agentBox.style.display = 'block';
-                agentBox.style.animation = 'fadeIn 1s';
+                // Safe access to generated email
+                let text = "No text generated.";
+                if(data.agent_analysis && data.agent_analysis.generated_email) {
+                    text = data.agent_analysis.generated_email;
+                }
                 
-                // Typewriter Effect
-                const text = data.agent_analysis.generated_email;
-                const textContainer = document.getElementById('agentText');
-                textContainer.innerHTML = ''; // Clear previous
+                const container = document.getElementById('agentText');
+                container.innerHTML = '';
                 
                 let i = 0;
-                function typeWriter() {
+                function type() {
                     if (i < text.length) {
-                        textContainer.innerHTML += text.charAt(i);
+                        container.innerHTML += text.charAt(i);
                         i++;
-                        setTimeout(typeWriter, 5);
+                        setTimeout(type, 5);
                     }
                 }
-                typeWriter();
-                
-                // Detach listener
-                streamRef.off('value', listener);
+                type();
+                ref.off('value'); // Stop listening once done
             }
         });
+    }
+
+    // --- 5. REWARD FUNCTION (USER FEEDBACK) ---
+    function submitReward(score) {
+        if (!currentStreamKey) return;
+        
+        // Write Feedback to DB
+        db.ref('clinical_streams/' + currentStreamKey).update({
+            user_feedback: score, // 1 = Good, 0 = Bad
+            feedback_timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            document.getElementById('feedbackUI').style.display = 'none';
+            document.getElementById('feedbackStatus').style.display = 'block';
+            console.log("Reward Signal Sent:", score);
+        }).catch((e) => {
+            console.error("Feedback Error:", e);
+            alert("Could not send feedback.");
+        });
+    }
+
+    function updateStatus(type, title, desc) {
+        const card = document.getElementById('statusCard');
+        card.style.display = 'block';
+        card.className = `status-card ${type}`;
+        document.getElementById('statusTitle').innerText = title;
+        document.getElementById('statusDesc').innerText = desc;
+        
+        const icon = document.getElementById('statusIcon');
+        if (type === 'processing') icon.innerHTML = '<span class="spinner"></span>';
+        if (type === 'success') icon.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981; font-size:24px;"></i>';
+        if (type === 'error') icon.innerHTML = '<i class="fas fa-times-circle" style="color:#ef4444; font-size:24px;"></i>';
     }
 </script>
 
