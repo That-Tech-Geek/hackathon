@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="scroll-smooth antialiased selection:bg-emerald-500 selection:text-white">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clinical Agent | Triple-Stream Architecture</title>
+    <title>Clinical Agent | The Triple-Stream Engine</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,8 +15,10 @@
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.10.1/core.js"></script>
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -27,18 +29,28 @@
                         mono: ['JetBrains Mono', 'monospace'],
                     },
                     colors: {
-                        glass: "rgba(255, 255, 255, 0.05)",
-                        glassBorder: "rgba(255, 255, 255, 0.1)",
+                        black: "#000000",
+                        dark: "#050507",
+                        panel: "#101012",
+                        surface: "#1C1C1E",
                     },
                     animation: {
-                        'blob': 'blob 7s infinite',
+                        'float': 'float 8s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 1s ease-out forwards',
                     },
                     keyframes: {
-                        blob: {
-                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
                         }
                     }
                 }
@@ -48,274 +60,340 @@
 
     <style>
         body {
-            background-color: #020617;
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            color: #f8fafc;
+            background-color: #000;
+            color: #f5f5f7;
+            overflow-x: hidden;
         }
-        
+
+        /* Apple-style Glass */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+            background: rgba(28, 28, 30, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .glass-button {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
+        .glass-nav {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Typography Gradients */
+        .text-gradient {
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .text-gradient-emerald {
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Scroll Observer Class */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Code Block Styling */
+        .code-window {
+            background: #1e1e1e;
+            box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);
+            font-size: 0.85rem;
+            line-height: 1.6;
         }
         
-        .glass-button:hover {
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        .notification-toast {
+            transform: translateY(150%);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-
-        .code-window {
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 0.75rem;
-            font-family: 'JetBrains Mono', monospace;
+        .notification-toast.show {
+            transform: translateY(0);
         }
-
-        /* Syntax Highlighting Mock */
-        .token-keyword { color: #ff7b72; }
-        .token-func { color: #d2a8ff; }
-        .token-string { color: #a5d6ff; }
-        .token-comment { color: #8b949e; }
     </style>
 </head>
-<body class="antialiased min-h-screen">
+<body>
 
-    <!-- PY CONFIG -->
+    <!-- PY CONFIG (Hidden Power) -->
+    <!-- Removed pyarrow to fix Pyodide wheel error -->
     <py-config>
         packages = ["numpy<2.0.0", "pandas", "openpyxl"]
     </py-config>
 
-    <!-- NAV -->
-    <nav class="fixed w-full z-50 border-b border-white/5 bg-slate-950/50 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="text-xl font-bold tracking-tighter flex items-center gap-2">
-                <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                CLINICAL<span class="text-emerald-400">AGENT</span>
+    <!-- NAVIGATION -->
+    <nav class="fixed w-full z-50 glass-nav transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+            <div class="text-sm font-semibold tracking-wide text-white/90 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                CLINICAL<span class="text-slate-500">AGENT</span>
             </div>
-            <div class="hidden md:flex space-x-8 text-sm font-medium text-slate-400">
-                <a href="#architecture" class="hover:text-white transition">Architecture</a>
-                <a href="#code" class="hover:text-white transition">Training Logic</a>
-                <a href="#demo" class="text-emerald-400 hover:text-emerald-300 transition">Live Demo</a>
+            <div class="hidden md:flex items-center space-x-8 text-xs font-medium text-slate-400 tracking-wide uppercase">
+                <a href="#vision" class="hover:text-white transition-colors">Vision</a>
+                <a href="#bento" class="hover:text-white transition-colors">Core</a>
+                <a href="#code" class="hover:text-white transition-colors">Logic</a>
             </div>
+            <a href="#demo" id="nav-cta" class="px-5 py-2 text-xs font-semibold bg-white text-black rounded-full hover:bg-slate-200 transition opacity-50 cursor-not-allowed pointer-events-none">
+                Wait for Engine...
+            </a>
         </div>
     </nav>
 
-    <!-- HERO -->
-    <section class="relative pt-40 pb-32 px-6 overflow-hidden">
-        <!-- Background Effects -->
-        <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full mix-blend-multiply filter blur-[128px] animate-blob"></div>
-        <div class="absolute top-0 right-1/4 w-96 h-96 bg-emerald-600/20 rounded-full mix-blend-multiply filter blur-[128px] animate-blob animation-delay-2000"></div>
+    <!-- SECTION 1: THE HOOK (Parallax Hero) -->
+    <section id="vision" class="min-h-screen flex flex-col justify-center items-center relative px-6 pt-20">
+        <!-- Ambient Glow -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-900/10 rounded-full blur-[120px] -z-10 pointer-events-none animate-float"></div>
 
-        <div class="max-w-5xl mx-auto text-center space-y-8 relative z-10">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-mono font-bold tracking-wider mb-6">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        <div class="max-w-4xl text-center space-y-8 z-10">
+            <div class="reveal active transition-delay-100">
+                <span class="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold tracking-widest uppercase text-emerald-400">
+                    V3.0 Architecture
                 </span>
-                V2.1 STABLE ENGINE
             </div>
             
-            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
-                Detect Anomalies. <br>
-                <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-emerald-400 to-teal-400">Before They Break.</span>
+            <h1 class="text-6xl md:text-8xl font-bold tracking-tight leading-none reveal active transition-delay-200">
+                Anomaly detection,<br>
+                <span class="text-gradient-emerald">perfected.</span>
             </h1>
             
-            <p class="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                The world's first browser-based clinical auditor. We analyze <span class="text-slate-200 font-semibold">Numeric Logs</span>, <span class="text-slate-200 font-semibold">Clinical Text</span>, and <span class="text-slate-200 font-semibold">Protocol IDs</span> simultaneously using local ONNX inference.
+            <p class="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto font-light leading-relaxed reveal active transition-delay-300">
+                The first browser-native clinical auditor. <br>
+                Zero latency. Zero data egress. <span class="text-white font-medium">Infinite scale.</span>
             </p>
 
-            <div class="pt-8 flex flex-col sm:flex-row justify-center gap-4">
-                <a href="#demo" class="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition transform hover:scale-105 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2">
-                    <span>Try Us Out</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                </a>
-                <a href="#code" class="glass-button px-8 py-4 text-white font-medium rounded-xl flex items-center justify-center gap-2">
-                    <span>View Logic</span>
-                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                </a>
+            <div class="pt-12 reveal active transition-delay-400">
+                <p class="text-xs text-slate-500 font-mono mb-4">SCROLL TO EXPLORE THE ENGINE</p>
+                <div class="w-px h-16 bg-gradient-to-b from-slate-500 to-transparent mx-auto"></div>
             </div>
         </div>
     </section>
 
-    <!-- ARCHITECTURE -->
-    <section id="architecture" class="py-24 border-t border-white/5 bg-slate-900/50">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="mb-16 md:text-center max-w-3xl mx-auto">
-                <h2 class="text-3xl font-bold mb-4">The Triple-Stream Architecture</h2>
-                <p class="text-slate-400">We treat a clinical trial as three distinct data streams. Each stream is isolated, processed via Scikit-Learn pipelines, and scored independently using Isolation Forests.</p>
+    <!-- SECTION 2: THE CORE (Bento Grid) -->
+    <section id="bento" class="py-32 px-6 bg-dark">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-16 reveal">
+                <h2 class="text-4xl md:text-5xl font-bold mb-6">Triple-Stream Intelligence.</h2>
+                <p class="text-xl text-slate-400 max-w-2xl">Traditional systems look at one dimension. We analyze three.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Stream 1 -->
-                <div class="glass-panel p-8 rounded-2xl group hover:bg-white/5 transition duration-500">
-                    <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <div class="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6 h-auto md:h-[600px]">
+                
+                <!-- Large Card: Numeric -->
+                <div class="md:col-span-2 md:row-span-2 glass-panel rounded-3xl p-8 md:p-12 relative overflow-hidden group reveal">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] group-hover:bg-blue-500/20 transition duration-700"></div>
+                    <div class="relative z-10 h-full flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 mb-6">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <h3 class="text-3xl font-bold mb-4">Numeric Stream</h3>
+                            <p class="text-slate-400 text-lg leading-relaxed max-w-md">
+                                Detects statistical outliers in cycle times and patient counts using Isolation Forests. It doesn't just check thresholds; it learns standard deviations in real-time.
+                            </p>
+                        </div>
+                        <div class="mt-8">
+                            <div class="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 w-3/4 animate-pulse"></div>
+                            </div>
+                            <div class="flex justify-between text-xs font-mono text-slate-500 mt-2">
+                                <span>Cycle Time</span>
+                                <span>Variance: 0.042</span>
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="text-lg font-bold mb-2 text-white">1. Numeric Stream</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-4">
-                        Analyzes cycle times, patient counts, and operational metrics.
-                    </p>
-                    <div class="text-xs font-mono text-blue-400 bg-blue-500/10 inline-block px-2 py-1 rounded">StandardScaler -> IsolationForest</div>
                 </div>
 
-                <!-- Stream 2 -->
-                <div class="glass-panel p-8 rounded-2xl group hover:bg-white/5 transition duration-500">
-                    <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                <!-- Small Card: Text -->
+                <div class="glass-panel rounded-3xl p-8 relative overflow-hidden group reveal">
+                    <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-[60px] group-hover:bg-purple-500/20 transition duration-700"></div>
+                    <div class="relative z-10">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">Alphabet Stream</h3>
+                        <p class="text-sm text-slate-400">Semantic analysis of clinical notes via TF-IDF vectorization.</p>
                     </div>
-                    <h3 class="text-lg font-bold mb-2 text-white">2. Alphabet Stream</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-4">
-                        Semantic analysis of clinical notes and doctor feedback.
-                    </p>
-                    <div class="text-xs font-mono text-purple-400 bg-purple-500/10 inline-block px-2 py-1 rounded">TF-IDF -> IsolationForest</div>
                 </div>
 
-                <!-- Stream 3 -->
-                <div class="glass-panel p-8 rounded-2xl group hover:bg-white/5 transition duration-500">
-                    <div class="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center mb-6 text-orange-400 group-hover:scale-110 transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                <!-- Small Card: ID -->
+                <div class="glass-panel rounded-3xl p-8 relative overflow-hidden group reveal">
+                    <div class="absolute -top-10 -right-10 w-40 h-40 bg-orange-500/10 rounded-full blur-[60px] group-hover:bg-orange-500/20 transition duration-700"></div>
+                    <div class="relative z-10">
+                        <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 mb-4">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">Alphanumeric Stream</h3>
+                        <p class="text-sm text-slate-400">Pattern integrity checks for Protocol IDs.</p>
                     </div>
-                    <h3 class="text-lg font-bold mb-2 text-white">3. Alphanumeric Stream</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-4">
-                        Integrity check for Subject IDs and protocol codes.
-                    </p>
-                    <div class="text-xs font-mono text-orange-400 bg-orange-500/10 inline-block px-2 py-1 rounded">FeatureHashing -> IsolationForest</div>
                 </div>
+
             </div>
         </div>
     </section>
 
-    <!-- CODE SHOWCASE -->
-    <section id="code" class="py-24 border-t border-white/5">
-        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-                <div class="inline-block px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-xs font-mono font-bold mb-4">TRAINING PIPELINE</div>
-                <h2 class="text-3xl font-bold mb-4">Built on Scikit-Learn. <br>Deployed on ONNX.</h2>
-                <p class="text-slate-400 mb-6 leading-relaxed">
-                    We train robust Isolation Forest models in Python, wrap them in pre-processing pipelines, and export them to the open standard ONNX format. This allows us to run Python-grade ML directly in your browser's WebAssembly engine.
+    <!-- SECTION 3: THE ENGINE (Code) -->
+    <section id="code" class="py-32 px-6 border-t border-white/5">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 items-center">
+            <div class="lg:w-1/2 reveal">
+                <h2 class="text-4xl font-bold mb-6">WASM Accelerated. <br>Local Privacy.</h2>
+                <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+                    We process gigabytes of clinical data without a single byte leaving your browser. 
+                    <br><br>
+                    By compiling Scikit-Learn pipelines to ONNX and running them via WebAssembly, we achieve sub-millisecond inference speeds while maintaining 100% data privacy.
                 </p>
-                <ul class="space-y-3 text-sm text-slate-300">
-                    <li class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        Zero data egress (Privacy First)
-                    </li>
-                    <li class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        Sub-millisecond inference time
-                    </li>
-                    <li class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        Automatic ETL via PyScript
-                    </li>
-                </ul>
-            </div>
-            
-            <!-- Code Block Mockup -->
-            <div class="code-window p-4 text-xs md:text-sm overflow-hidden shadow-2xl shadow-blue-900/20">
-                <div class="flex gap-2 mb-4">
-                    <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
-                    <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
-                    <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                <div class="flex gap-4">
+                    <div class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-mono">ONNX Runtime</div>
+                    <div class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-mono">PyOdide</div>
+                    <div class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-mono">WASM</div>
                 </div>
-                <pre class="text-slate-300 overflow-x-auto"><code><span class="token-keyword">from</span> sklearn.ensemble <span class="token-keyword">import</span> IsolationForest
-<span class="token-keyword">from</span> sklearn.pipeline <span class="token-keyword">import</span> Pipeline
+            </div>
 
-<span class="token-comment"># 1. Define the Pipeline</span>
+            <div class="lg:w-1/2 w-full reveal">
+                <div class="code-window rounded-xl overflow-hidden border border-white/10 relative">
+                    <div class="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/5">
+                        <div class="w-3 h-3 rounded-full bg-red-500/20"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500/20"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500/20"></div>
+                        <span class="ml-2 text-xs text-slate-500 font-mono">pipeline.py</span>
+                    </div>
+                    <div class="p-6 overflow-x-auto text-slate-300 font-mono text-xs">
+<pre><code><span class="text-pink-400">from</span> sklearn.pipeline <span class="text-pink-400">import</span> Pipeline
+<span class="text-pink-400">from</span> skl2onnx <span class="text-pink-400">import</span> to_onnx
+
+<span class="text-slate-500"># 1. The Logic</span>
 pipeline = Pipeline([
-    (<span class="token-string">'scaler'</span>, StandardScaler()),
-    (<span class="token-string">'model'</span>, IsolationForest(contamination=<span class="token-func">0.05</span>))
+    (<span class="text-green-400">'scaler'</span>, StandardScaler()),
+    (<span class="text-green-400">'model'</span>, IsolationForest(contamination=<span class="text-purple-400">0.05</span>))
 ])
 
-<span class="token-comment"># 2. Train on Healthy Data</span>
-pipeline.fit(X_train)
+<span class="text-slate-500"># 2. The Compile</span>
+onx = to_onnx(pipeline, X_train, target_opset=<span class="text-purple-400">12</span>)
 
-<span class="token-comment"># 3. Export to ONNX for Web</span>
-<span class="token-keyword">from</span> skl2onnx <span class="token-keyword">import</span> to_onnx
-onx = to_onnx(pipeline, X_train[:<span class="token-func">1</span>])
-<span class="token-keyword">with</span> <span class="token-func">open</span>(<span class="token-string">"numeric.onnx"</span>, <span class="token-string">"wb"</span>) <span class="token-keyword">as</span> f:
-    f.write(onx.SerializeToString())</code></pre>
+<span class="text-slate-500"># 3. The Result</span>
+<span class="text-yellow-400">print</span>(<span class="text-green-400">"Compiled to WebAssembly Compatible Graph"</span>)</code></pre>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- LIVE DEMO SECTION -->
-    <section id="demo" class="py-24 bg-slate-900 border-t border-white/5 relative">
-        <div class="max-w-4xl mx-auto px-6 relative z-10">
-            <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold mb-2">Live Inference Engine</h2>
-                <div id="status-box" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-sm mt-4">
-                    <div id="loading-spinner" class="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></div>
-                    <span id="loading-text" class="text-slate-400 font-mono">Initializing ONNX Runtime...</span>
-                </div>
+    <!-- SECTION 4: THE DEMO (Functional) -->
+    <section id="demo" class="py-32 px-6 bg-surface border-t border-white/5">
+        <div class="max-w-3xl mx-auto">
+            <div class="text-center mb-12 reveal">
+                <span class="text-emerald-400 text-xs font-bold tracking-widest uppercase mb-4 block">Live Interface</span>
+                <h2 class="text-4xl font-bold">Ready to Audit.</h2>
             </div>
 
-            <!-- Upload Card -->
-            <div class="glass-panel p-8 md:p-12 rounded-2xl text-center border-t-2 border-t-emerald-500/20">
-                <div class="mb-8">
-                    <svg class="w-16 h-16 text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <label class="block text-lg font-medium text-white mb-2">Upload Clinical Dataset</label>
-                    <p class="text-slate-400 text-sm mb-6">Accepts .xlsx files with standard clinical formatting.</p>
+            <!-- THE APP CONTAINER -->
+            <div class="glass-panel rounded-2xl p-1 shadow-2xl reveal">
+                <div class="bg-black rounded-xl p-8 md:p-12 relative overflow-hidden">
                     
-                    <input type="file" id="file-upload" class="hidden" accept=".xlsx" disabled onchange="updateFileName()">
-                    <button onclick="document.getElementById('file-upload').click()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-600 transition text-sm font-medium">
-                        Select File
-                    </button>
-                    <div id="file-name" class="mt-4 text-emerald-400 text-sm font-mono h-5"></div>
-                </div>
+                    <!-- Upload State -->
+                    <div class="text-center space-y-8 relative z-10">
+                        <div class="w-20 h-20 bg-white/5 rounded-full mx-auto flex items-center justify-center border border-white/10">
+                            <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        </div>
+                        
+                        <div>
+                            <input type="file" id="file-upload" class="hidden" accept=".xlsx" disabled onchange="updateFileName()">
+                            <button onclick="document.getElementById('file-upload').click()" class="px-8 py-3 bg-white text-black hover:bg-slate-200 font-semibold rounded-full transition transform hover:scale-105">
+                                Choose Dataset
+                            </button>
+                            <p id="file-name" class="mt-4 text-emerald-400 text-sm font-mono h-6"></p>
+                        </div>
 
-                <button id="analyze-btn" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled onclick="handleAnalysis()">
-                    INITIATE ANALYSIS
+                        <button id="analyze-btn" class="w-full py-4 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-xl hover:bg-emerald-600 hover:text-white transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed" disabled onclick="handleAnalysis()">
+                            INITIALIZE SYSTEM
+                        </button>
+                    </div>
+
+                    <!-- Results State (Hidden) -->
+                    <div id="results-area" class="hidden mt-12 pt-12 border-t border-white/10 animate-fade-in">
+                        <div class="grid grid-cols-3 gap-4 mb-8">
+                            <div class="bg-white/5 p-4 rounded-lg text-center">
+                                <div class="text-xs text-slate-500 uppercase">Numeric</div>
+                                <div id="res-num" class="text-xl font-mono font-bold mt-1">--</div>
+                            </div>
+                            <div class="bg-white/5 p-4 rounded-lg text-center">
+                                <div class="text-xs text-slate-500 uppercase">Text</div>
+                                <div id="res-alpha" class="text-xl font-mono font-bold mt-1">--</div>
+                            </div>
+                            <div class="bg-white/5 p-4 rounded-lg text-center">
+                                <div class="text-xs text-slate-500 uppercase">ID</div>
+                                <div id="res-alphanum" class="text-xl font-mono font-bold mt-1">--</div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-emerald-900/10 border border-emerald-500/20 rounded-lg p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-bold text-emerald-400">INTERVENTION PROTOCOL</h3>
+                                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            </div>
+                            <pre id="intervention-text" class="text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="py-12 text-center border-t border-white/5 bg-black">
+        <p class="text-slate-600 text-xs">© 2025 Clinical Agent Project. Engineered with PyScript & ONNX.</p>
+    </footer>
+
+    <!-- NOTIFICATION TOAST (The "Pop-up") -->
+    <div id="ready-toast" class="fixed bottom-8 right-8 z-50 notification-toast">
+        <div class="glass-panel p-1 rounded-2xl shadow-2xl">
+            <div class="bg-slate-900/90 rounded-xl p-4 flex items-center gap-4 border border-white/10 pr-6">
+                <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold text-sm">Neural Engine Online</h4>
+                    <p class="text-slate-400 text-xs">Models loaded locally via WASM.</p>
+                </div>
+                <button onclick="scrollToDemo()" class="ml-4 px-4 py-1.5 bg-white text-black text-xs font-bold rounded-full hover:bg-slate-200 transition">
+                    Launch
                 </button>
             </div>
-
-            <!-- Results Dashboard -->
-            <div id="results-area" class="hidden mt-8 space-y-6 transition-all duration-500">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                        <h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">Numeric Score</h3>
-                        <p id="res-num" class="text-3xl font-mono font-bold text-white">--</p>
-                    </div>
-                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                        <h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">Text Score</h3>
-                        <p id="res-alpha" class="text-3xl font-mono font-bold text-white">--</p>
-                    </div>
-                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                        <h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">ID Score</h3>
-                        <p id="res-alphanum" class="text-3xl font-mono font-bold text-white">--</p>
-                    </div>
-                </div>
-                
-                <div class="glass-panel rounded-xl overflow-hidden border border-emerald-500/30">
-                    <div class="bg-emerald-500/10 px-6 py-3 border-b border-emerald-500/20 flex justify-between items-center">
-                        <h3 class="text-sm font-bold text-emerald-400">GENERATED INTERVENTION PROTOCOL</h3>
-                        <div class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold">PRIORITY HIGH</div>
-                    </div>
-                    <div class="p-6">
-                        <pre id="intervention-text" class="text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"></pre>
-                    </div>
-                </div>
-            </div>
         </div>
-    </section>
-
-    <footer class="py-12 text-center text-slate-600 text-sm border-t border-white/5">
-        <p>© 2025 Clinical Agent Project. Built with PyScript & ONNX.</p>
-    </footer>
+    </div>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
+        // --- 1. SCROLL ANIMATION OBSERVER ---
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // --- 2. SMOOTH SCROLL HELPER ---
+        function scrollToDemo() {
+            document.getElementById('demo').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('ready-toast').classList.remove('show');
+        }
+
+        // --- 3. MODEL LOGIC ---
         const SESSIONS = { numeric: null, alphabet: null, alphanum: null };
 
         function updateFileName() {
@@ -326,35 +404,37 @@ onx = to_onnx(pipeline, X_train[:<span class="token-func">1</span>])
         }
 
         async function initModels() {
-            const status = document.getElementById('loading-text');
-            const spinner = document.getElementById('loading-spinner');
-            
             try {
                 const options = { executionProviders: ['wasm'] };
-                status.innerText = "Loading Neural Networks...";
-                
                 const load = async (path) => {
                     try { return await ort.InferenceSession.create(path, options); }
                     catch (e) { console.warn(`Using Mock for ${path}`); return null; }
                 };
 
-                SESSIONS.numeric = await load('./numeric.onnx');
-                SESSIONS.alphabet = await load('./alphabet.onnx');
-                SESSIONS.alphanum = await load('./alphanum.onnx');
+                // Parallel Load
+                [SESSIONS.numeric, SESSIONS.alphabet, SESSIONS.alphanum] = await Promise.all([
+                    load('./numeric.onnx'),
+                    load('./alphabet.onnx'),
+                    load('./alphanum.onnx')
+                ]);
 
-                status.innerText = "System Online. Ready for Data.";
-                status.className = "text-emerald-400 font-mono font-bold";
-                spinner.className = "w-2 h-2 rounded-full bg-emerald-400";
+                // --- TRIGGER THE POP-UP ---
+                document.getElementById('ready-toast').classList.add('show');
                 
+                // Unlock UI
                 document.getElementById('file-upload').disabled = false;
                 const btn = document.getElementById('analyze-btn');
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.innerHTML = "RUN ANALYSIS";
+                
+                // Update Nav Button
+                const navCta = document.getElementById('nav-cta');
+                navCta.innerHTML = "Launch App";
+                navCta.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                navCta.href = "#demo";
 
             } catch (e) {
-                console.error(e);
-                status.innerText = "Init Failed: Check Console";
-                spinner.className = "w-2 h-2 rounded-full bg-red-500";
+                console.error("Init Failed", e);
             }
         }
 
@@ -365,7 +445,7 @@ onx = to_onnx(pipeline, X_train[:<span class="token-func">1</span>])
             if (fileInput.files.length === 0) { alert("Please select a file first."); return; }
 
             const originalText = btn.innerText;
-            btn.innerText = "EXTRACTING FEATURES...";
+            btn.innerText = "PROCESSING...";
             btn.disabled = true;
 
             try {
@@ -375,18 +455,15 @@ onx = to_onnx(pipeline, X_train[:<span class="token-func">1</span>])
 
                 if (!window.process_excel_bridge) throw new Error("Python Engine not ready");
                 
-                // --- CRITICAL FIX: Convert Proxy to JS Object safely ---
                 const featuresProxy = await window.process_excel_bridge(bytes); 
                 const features = featuresProxy.toJs({dict_converter: Object.fromEntries});
-                // -----------------------------------------------------
 
                 if (features.error) throw new Error(features.error);
 
-                btn.innerText = "RUNNING INFERENCE...";
                 const results = await runOnnxInference(features);
                 displayResults(results);
 
-                btn.innerText = "ANALYSIS COMPLETE";
+                btn.innerText = "COMPLETE";
                 setTimeout(() => { btn.innerText = "RUN AGAIN"; btn.disabled = false; }, 2000);
 
             } catch (e) {
@@ -453,9 +530,9 @@ onx = to_onnx(pipeline, X_train[:<span class="token-func">1</span>])
             document.getElementById('results-area').classList.remove('hidden');
 
             let failures = [];
-            if (worst.numeric < -0.1) failures.push("NUMERIC (Operational Efficiency)");
-            if (worst.alphabet < -0.1) failures.push("ALPHABET (Documentation Quality)");
-            if (worst.alphanum < -0.1) failures.push("ALPHANUMERIC (Data Integrity)");
+            if (worst.numeric < -0.1) failures.push("NUMERIC");
+            if (worst.alphabet < -0.1) failures.push("ALPHABET");
+            if (worst.alphanum < -0.1) failures.push("ALPHANUMERIC");
             const diagnosis = failures.length ? failures.join(" & ") : "General Anomaly";
 
             const email = `TO: Site Coordinator (ID: ${worst.site_id})
@@ -465,11 +542,10 @@ System monitoring has flagged Site ${worst.site_id} as a critical bottleneck.
 Risk Score: ${worst.global.toFixed(4)}
 
 Recommended Actions:
-${failures.includes("NUMERIC") ? "- Audit data entry cycle times.\n" : ""}${failures.includes("ALPHABET") ? "- Review clinical notes for semantic completeness.\n" : ""}${failures.includes("ALPHANUMERIC") ? "- Verify Subject IDs against Reference Dictionary.\n" : ""}
+${failures.includes("NUMERIC") ? "- Audit data entry cycle times.\n" : ""}${failures.includes("ALPHABET") ? "- Review clinical notes for completeness.\n" : ""}${failures.includes("ALPHANUMERIC") ? "- Verify Subject IDs against Dictionary.\n" : ""}
 Please acknowledge receipt.`;
 
             document.getElementById('intervention-text').innerText = email;
-            document.getElementById('results-area').scrollIntoView({ behavior: 'smooth' });
         }
 
         window.addEventListener('load', initModels);
@@ -533,7 +609,6 @@ Please acknowledge receipt.`;
                 # Aggregate Numeric
                 if buffer_num:
                     df_num = pd.concat(buffer_num).groupby('site_id').mean().fillna(0)
-                    # FIX: Force String Type for index
                     all_sites.update(df_num.index.astype(str).tolist())
                 else: df_num = pd.DataFrame()
 
@@ -551,7 +626,6 @@ Please acknowledge receipt.`;
                     all_sites.update(df_alphanum.index.astype(str).tolist())
                 else: df_alphanum = pd.DataFrame()
 
-                # FIX: Sort string version of sites
                 sorted_sites = sorted(list(all_sites))
                 
                 # Export
@@ -559,7 +633,6 @@ Please acknowledge receipt.`;
                 alphabet_list = df_alpha.reindex(sorted_sites).fillna('').iloc[:, 0].tolist() if not df_alpha.empty else []
                 alphanum_list = df_alphanum.reindex(sorted_sites).fillna(0).values.tolist() if not df_alphanum.empty else []
 
-                # FIX: Return pure Python dict, let toJs handle conversion
                 return {
                     "site_ids": sorted_sites,
                     "numeric": numeric_list,
