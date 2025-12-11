@@ -3,280 +3,350 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>hAIlth - Command Center</title>
+    <title>Clinical Trial Agent (Serverless)</title>
     
-    <!-- FIREBASE SDKs (Compat v9) -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- SHEETJS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- PyScript: The Engine -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
 
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; --card-bg: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--primary); margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        .container { width: 100%; max-width: 850px; animation: fadeIn 0.5s ease-out; }
-
-        /* HEADER */
-        .header { text-align: center; margin-bottom: 40px; }
-        h1 { font-weight: 800; font-size: 2.5rem; margin: 0; letter-spacing: -1px; }
-        .tag { background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; vertical-align: middle; margin-left: 10px; }
-
-        /* DROP ZONE */
-        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 60px 20px; text-align: center; background: var(--card-bg); transition: all 0.3s; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .drop-zone:hover { border-color: var(--accent); transform: translateY(-2px); }
-        .drop-zone.active { border-color: var(--success); background: #f0fdf4; }
-        .icon-large { font-size: 3rem; color: #94a3b8; margin-bottom: 15px; }
-
-        /* STATUS CARD */
-        .status-card { margin-top: 25px; background: var(--card-bg); border-radius: 12px; padding: 25px; display: none; border-left: 6px solid #cbd5e1; animation: slideUp 0.4s; }
-        .status-card.processing { border-color: var(--accent); }
-        .status-card.success { border-color: var(--success); }
-        .status-card.error { border-color: var(--danger); }
-        .status-header { display: flex; align-items: center; gap: 15px; }
-        .status-title { font-weight: 700; font-size: 1.2rem; margin: 0; }
-        .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(59, 130, 246, 0.3); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* AGENT BOX */
-        .agent-box { margin-top: 25px; background: #1e293b; color: #e2e8f0; padding: 30px; border-radius: 12px; font-family: 'Courier New', monospace; display: none; border: 1px solid #334155; position: relative; }
-        .agent-header { color: var(--success); font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 10px; display: block; margin-bottom: 15px; }
+        /* Custom Loader Animation */
+        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @-webkit-keyframes spinner { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* FEEDBACK UI (REWARD FUNCTION) */
-        .feedback-actions { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #475569; display: flex; gap: 10px; align-items: center; }
-        .feedback-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-        .btn-approve { background: #064e3b; color: #34d399; }
-        .btn-approve:hover { background: #065f46; }
-        .btn-reject { background: #450a0a; color: #f87171; }
-        .btn-reject:hover { background: #7f1d1d; }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+        /* Hide scrollbar for cleaner look */
+        body::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4 font-sans">
 
-<div class="container">
-    <div class="header">
-        <h1>hAIlth <span class="tag">CI/CD ENABLED</span></h1>
-        <div class="subtitle">Real-Time Analytics with Human-in-the-Loop Learning</div>
-    </div>
+    <!-- CONFIGURATION: Dependencies -->
+    <py-config>
+        packages = ["pandas", "scikit-learn", "joblib", "openpyxl", "numpy"]
+    </py-config>
 
-    <!-- UPLOAD (MODIFIED: Added Click support) -->
-    <div class="drop-zone" id="dropZone">
-        <i class="fas fa-cloud-upload-alt icon-large"></i>
-        <h3>Click or Drag & Drop Clinical Data Stream</h3>
-        <p style="color: #64748b; font-size: 0.9em;">Supports .xlsx / .csv</p>
-        <!-- HIDDEN INPUT -->
-        <input type="file" id="fileInput" style="display: none;" accept=".csv, .xlsx">
-    </div>
+    <!-- UI LAYER -->
+    <div class="max-w-4xl w-full space-y-8 animate-fade-in">
+        <div class="text-center">
+            <h1 class="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+                Clinical Agent <span class="text-white text-2xl font-light">v2.0</span>
+            </h1>
+            <p class="mt-3 text-slate-400 text-lg">Serverless Triple-Stream Analysis Engine</p>
+        </div>
 
-    <!-- STATUS -->
-    <div class="status-card" id="statusCard">
-        <div class="status-header">
-            <div id="statusIcon"></div>
-            <div>
-                <h3 class="status-title" id="statusTitle">Processing...</h3>
-                <p id="statusDesc" style="margin:0; color:#64748b;">Initializing...</p>
+        <!-- STATUS BOX -->
+        <div id="status-box" class="bg-slate-800/50 backdrop-blur p-4 rounded-lg border border-slate-700 text-center transition-all duration-300">
+            <div id="loading-spinner" class="inline-block w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+            <span id="loading-text" class="text-yellow-400 font-mono text-sm">Initializing Python Runtime...</span>
+        </div>
+
+        <!-- UPLOAD SECTION -->
+        <div class="bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl relative overflow-hidden group">
+            <div class="absolute top-0 left-0 w-1 h-full bg-blue-500 group-hover:bg-blue-400 transition-colors"></div>
+            
+            <label class="block mb-4 text-sm font-medium text-slate-300 uppercase tracking-wider">Upload Clinical Dataset (.xlsx)</label>
+            <input type="file" id="file-upload" class="block w-full text-sm text-slate-400 
+                file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 
+                file:text-sm file:font-semibold file:bg-blue-600 file:text-white 
+                hover:file:bg-blue-500 file:cursor-pointer cursor-pointer transition-all" 
+                accept=".xlsx" disabled>
+            
+            <button id="analyze-btn" class="mt-8 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg opacity-50 cursor-not-allowed transform active:scale-95" disabled>
+                INITIATE ANALYSIS PROTOCOL
+            </button>
+        </div>
+
+        <!-- RESULTS DASHBOARD (Hidden by default) -->
+        <div id="results-area" class="hidden space-y-6 transition-all duration-500 ease-in-out">
+            <!-- Score Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-blue-500 shadow-lg">
+                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Operational (Numeric)</h3>
+                    <p id="res-num" class="text-3xl font-mono font-bold text-white">--</p>
+                    <p class="text-xs text-slate-500 mt-2">Cycle time & variance metrics</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-purple-500 shadow-lg">
+                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Documentation (Text)</h3>
+                    <p id="res-alpha" class="text-3xl font-mono font-bold text-white">--</p>
+                    <p class="text-xs text-slate-500 mt-2">NLP semantic analysis</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-orange-500 shadow-lg">
+                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Integrity (IDs)</h3>
+                    <p id="res-alphanum" class="text-3xl font-mono font-bold text-white">--</p>
+                    <p class="text-xs text-slate-500 mt-2">Pattern matching & complexity</p>
+                </div>
+            </div>
+            
+            <!-- Intervention Protocol -->
+            <div class="bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden">
+                <div class="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-emerald-400">Intervention Protocol Generated</h3>
+                    <span class="text-xs bg-emerald-900 text-emerald-300 px-2 py-1 rounded">PRIORITY HIGH</span>
+                </div>
+                <div class="p-6">
+                    <pre id="intervention-text" class="text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"></pre>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- AGENT RESULT -->
-    <div class="agent-box" id="agentResult">
-        <span class="agent-header">>>> AGENT INTERVENTION PROTOCOL</span>
-        <div id="agentText"></div>
+    <!-- PYTHON LOGIC LAYER -->
+    <py-script>
+        import js
+        import pandas as pd
+        import numpy as np
+        import joblib
+        import io
+        import warnings
+        import asyncio
+        from pyodide.http import pyfetch
+        from pyodide.ffi import create_proxy
+        from js import document, console, Uint8Array, File, FileReader
+
+        warnings.filterwarnings('ignore')
+
+        # --- GLOBAL STATE ---
+        MODELS = {}
+
+        # --- 1. MODEL LOADER ---
+        async def load_models():
+            """Fetch .joblib files from the local server into PyScript virtual FS"""
+            files = [
+                "numeric_model.joblib", "numeric_scaler.joblib",
+                "alphabet_model.joblib", "alphabet_tfidf.joblib",
+                "alphanum_model.joblib", "alphanum_scaler.joblib"
+            ]
+            
+            status_text = document.getElementById('loading-text')
+            
+            for filename in files:
+                try:
+                    # Fetch file from server
+                    response = await pyfetch(filename)
+                    if response.status == 200:
+                        content = await response.bytes()
+                        # Write to virtual filesystem
+                        with open(filename, "wb") as f:
+                            f.write(content)
+                        console.log(f"Loaded {filename}")
+                    else:
+                        console.error(f"Failed to fetch {filename}")
+                        status_text.innerText = f"Error: Missing {filename}"
+                        status_text.className = "text-red-400 font-mono"
+                        return
+                except Exception as e:
+                    console.error(f"Error loading {filename}: {str(e)}")
+                    status_text.innerText = f"Error loading models. Check console."
+                    status_text.className = "text-red-400 font-mono"
+                    return
+
+            # Load into Memory
+            try:
+                status_text.innerText = " hydrating models..."
+                MODELS['num_model'] = joblib.load('numeric_model.joblib')
+                MODELS['num_scaler'] = joblib.load('numeric_scaler.joblib')
+                MODELS['alpha_model'] = joblib.load('alphabet_model.joblib')
+                MODELS['alpha_tfidf'] = joblib.load('alphabet_tfidf.joblib')
+                MODELS['alphanum_model'] = joblib.load('alphanum_model.joblib')
+                MODELS['alphanum_scaler'] = joblib.load('alphanum_scaler.joblib')
+                
+                # Update UI to Ready State
+                status_text.innerText = "System Ready. Waiting for Data.";
+                status_text.className = "text-emerald-400 font-mono font-bold";
+                document.getElementById('loading-spinner').classList.remove('animate-spin');
+                document.getElementById('loading-spinner').classList.add('bg-emerald-400');
+                
+                # Enable Controls
+                document.getElementById('file-upload').disabled = False
+                btn = document.getElementById('analyze-btn')
+                btn.disabled = False
+                btn.classList.remove('opacity-50', 'cursor-not-allowed')
+                
+            except Exception as e:
+                status_text.innerText = f"Init Error: {str(e)}"
+                console.error(str(e))
+
+        # --- 2. DATA LOGIC ---
+        def detect_and_route(series):
+            clean = series.dropna().astype(str)
+            if clean.empty: return 'skip'
+            try:
+                pd.to_numeric(clean)
+                return 'numeric'
+            except:
+                pass
+            if clean.str.match(r'^[a-zA-Z\s\.,]+$').all():
+                return 'alphabet'
+            return 'alphanumeric'
+
+        async def run_analysis(event):
+            """Main Event Handler triggered by Button Click"""
+            
+            # 1. UI Feedback
+            btn = document.getElementById('analyze-btn')
+            btn.innerText = "PROCESSING STREAMS..."
+            btn.disabled = True
+            
+            file_input = document.getElementById('file-upload')
+            file_list = file_input.files
+            if file_list.length == 0:
+                btn.innerText = "NO FILE SELECTED"
+                await asyncio.sleep(2)
+                btn.innerText = "INITIATE ANALYSIS PROTOCOL"
+                btn.disabled = False
+                return
+
+            file_obj = file_list.item(0)
+            
+            try:
+                # 2. Read File (Async)
+                array_buf = await file_obj.arrayBuffer()
+                file_bytes = array_buf.to_bytes()
+                
+                # 3. Process Excel
+                xls = pd.ExcelFile(io.BytesIO(file_bytes))
+                
+                buffer_num, buffer_alpha, buffer_alphanum = [], [], []
+                
+                for sheet in xls.sheet_names:
+                    if 'ref' in sheet.lower() or 'dict' in sheet.lower(): continue
+                    df = pd.read_excel(xls, sheet_name=sheet)
+                    if df.empty: continue
+                    
+                    df.columns = [str(c).lower().strip().replace(' ', '_') for c in df.columns]
+                    site_col = next((c for c in df.columns if 'site' in c and 'id' in c), None)
+                    if not site_col: continue
+                    df.rename(columns={site_col: 'site_id'}, inplace=True)
+                    
+                    curr_num = pd.DataFrame({'site_id': df['site_id']})
+                    curr_alpha = pd.DataFrame({'site_id': df['site_id']})
+                    curr_alphanum = pd.DataFrame({'site_id': df['site_id']})
+                    
+                    for col in df.columns:
+                        if col == 'site_id': continue
+                        target = detect_and_route(df[col])
+                        col_name = f"{sheet}_{col}"
+                        if target == 'numeric': curr_num[col_name] = pd.to_numeric(df[col], errors='coerce')
+                        elif target == 'alphabet': curr_alpha[col_name] = df[col].astype(str)
+                        elif target == 'alphanumeric': curr_alphanum[col_name] = df[col].astype(str)
+                    
+                    if curr_num.shape[1] > 1: buffer_num.append(curr_num)
+                    if curr_alpha.shape[1] > 1: buffer_alpha.append(curr_alpha)
+                    if curr_alphanum.shape[1] > 1: buffer_alphanum.append(curr_alphanum)
+
+                # 4. Aggregation
+                streams = {}
+                if buffer_num: streams['numeric'] = pd.concat(buffer_num).groupby('site_id').mean().fillna(0)
+                else: streams['numeric'] = pd.DataFrame()
+                
+                if buffer_alpha:
+                    raw_alpha = pd.concat(buffer_alpha)
+                    streams['alphabet'] = raw_alpha.groupby('site_id').agg(lambda x: ' '.join(x.astype(str)))
+                    streams['alphabet'] = streams['alphabet'].apply(lambda x: ' '.join(x), axis=1).to_frame('all_text')
+                else: streams['alphabet'] = pd.DataFrame()
+
+                if buffer_alphanum: streams['alphanumeric'] = pd.concat(buffer_alphanum).groupby('site_id').nunique()
+                else: streams['alphanumeric'] = pd.DataFrame()
+
+                # 5. Inference
+                all_sites = set()
+                for k,v in streams.items(): 
+                    if not v.empty: all_sites.update(v.index.tolist())
+                
+                if not all_sites: 
+                    raise Exception("No valid site ID columns found in data.")
+
+                results = pd.DataFrame(index=list(all_sites))
+                
+                # Numeric Model
+                if not streams['numeric'].empty:
+                    data = streams['numeric'].reindex(results.index).fillna(0)
+                    results['numeric_score'] = MODELS['num_model'].decision_function(MODELS['num_scaler'].transform(data))
+                else: results['numeric_score'] = 0.0
+
+                # Alphabet Model
+                if not streams['alphabet'].empty:
+                    data = streams['alphabet'].reindex(results.index).fillna('')
+                    results['alphabet_score'] = MODELS['alpha_model'].decision_function(MODELS['alpha_tfidf'].transform(data['all_text']).toarray())
+                else: results['alphabet_score'] = 0.0
+
+                # Alphanumeric Model
+                if not streams['alphanumeric'].empty:
+                    data = streams['alphanumeric'].reindex(results.index).fillna(0)
+                    results['alphanum_score'] = MODELS['alphanum_model'].decision_function(MODELS['alphanum_scaler'].transform(data))
+                else: results['alphanum_score'] = 0.0
+
+                results['global_risk'] = results.mean(axis=1)
+                
+                # 6. Diagnosis & Report
+                worst_site = results.sort_values('global_risk').iloc[0]
+                site_id = worst_site.name
+                
+                # Update Score Cards
+                document.getElementById('res-num').innerText = f"{worst_site['numeric_score']:.4f}"
+                document.getElementById('res-alpha').innerText = f"{worst_site['alphabet_score']:.4f}"
+                document.getElementById('res-alphanum').innerText = f"{worst_site['alphanum_score']:.4f}"
+                
+                # Generate Email Logic
+                failures = []
+                if worst_site['numeric_score'] < -0.1: failures.append("NUMERIC (Operational Efficiency)")
+                if worst_site['alphabet_score'] < -0.1: failures.append("ALPHABET (Documentation Quality)")
+                if worst_site['alphanum_score'] < -0.1: failures.append("ALPHANUMERIC (Data Integrity)")
+                
+                diagnosis = " & ".join(failures) if failures else "General Anomaly"
+                
+                email_body = f"""TO: Site Coordinator (ID: {site_id})
+FROM: Clinical AI Operations Agent
+SUBJECT: URGENT - Risk Anomaly Detected [{diagnosis}]
+
+Body:
+System monitoring has flagged Site {site_id} as a critical operational bottleneck.
+
+Our Triple-Stream Analysis detected the following anomalies:
+- Diagnosis: {diagnosis}
+- Risk Score: {worst_site['global_risk']:.4f} (Threshold: -0.10)
+
+CONTEXT AWARE RECOMMENDATION:
+"""
+                if "NUMERIC" in diagnosis:
+                    email_body += "- The statistical variance in your operational logs is too high. Please audit data entry cycle times.\n"
+                if "ALPHABET" in diagnosis:
+                    email_body += "- Semantic analysis of your clinical notes indicates a lack of detail or high frequency of error keywords.\n"
+                if "ALPHANUMERIC" in diagnosis:
+                    email_body += "- Irregular patterns found in Subject IDs or Protocol Codes. Verify alignment with the Reference Dictionary.\n"
+                    
+                email_body += "\nPlease acknowledge receipt of this automated intervention."
+                
+                document.getElementById('intervention-text').innerText = email_body
+                
+                # Show Results Area
+                document.getElementById('results-area').classList.remove('hidden')
+                
+                # Reset Button
+                btn.innerText = "RUN ANALYSIS AGAIN"
+                btn.disabled = False
+                
+            except Exception as e:
+                console.error(f"Analysis Error: {e}")
+                btn.innerText = "ERROR - CHECK CONSOLE"
+                btn.classList.add('bg-red-600')
+                await asyncio.sleep(3)
+                btn.innerText = "INITIATE ANALYSIS PROTOCOL"
+                btn.disabled = False
+                btn.classList.remove('bg-red-600')
+
+        # --- 3. INIT & BINDINGS ---
         
-        <!-- REWARD FUNCTION UI -->
-        <div class="feedback-actions" id="feedbackUI">
-            <span class="feedback-label">Rate this intervention:</span>
-            <button class="btn btn-approve" onclick="submitReward(1)">
-                <i class="fas fa-thumbs-up"></i> Accurate
-            </button>
-            <button class="btn btn-reject" onclick="submitReward(0)">
-                <i class="fas fa-thumbs-down"></i> False Positive
-            </button>
-        </div>
-        <div id="feedbackStatus" style="color: #94a3b8; font-size: 0.8em; margin-top: 10px; display:none;">
-            <i>Feedback captured. Adjusting model weights...</i>
-        </div>
-    </div>
-</div>
-
-<script>
-    // --- 1. CONFIGURATION ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyCOrb15cWf-0j4q3EYmpgChVIANQh-Eok0",
-        authDomain: "hackathons-8f113.firebaseapp.com",
-        databaseURL: "https://hackathons-8f113-default-rtdb.firebaseio.com/",
-        projectId: "hackathons-8f113",
-        storageBucket: "hackathons-8f113.firebasestorage.app",
-        messagingSenderId: "682635562372",
-        appId: "1:682635562372:web:e5cac66a90f5fce2a5e1d1"
-    };
-
-    // Initialize Firebase with Error Checking
-    if (!firebase.apps.length) {
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (e) {
-            console.error("Firebase Init Error:", e);
-            alert("Firebase Init Failed. Check Config in Source Code.");
-        }
-    }
-    const db = firebase.database();
-    let currentStreamKey = null;
-
-    // --- 2. DRAG & DROP + CLICK LOGIC ---
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-
-    // Click to Open
-    dropZone.addEventListener('click', () => fileInput.click());
-
-    // File Input Change
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) processFile(file);
-    });
-
-    // Drag Events
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
-    dropZone.addEventListener('dragleave', (e) => { e.stopPropagation(); dropZone.classList.remove('active'); });
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // Stop bubbling
-        dropZone.classList.remove('active');
-        const file = e.dataTransfer.files[0];
-        if (file) processFile(file);
-    });
-
-    // --- 3. UPLOAD LOGIC ---
-    async function processFile(file) {
-        if(firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
-            alert("CONFIG ERROR: You have not pasted your API Key in line 119 of index.html!");
-            return;
-        }
-
-        // --- DEBUG: CONNECTION TRAP ---
-        // Checks if we are actually reaching the server
-        console.log("Checking DB Connection...");
-        db.ref(".info/connected").on("value", snap => {
-            if (snap.val() === true) {
-                console.log("✅ Firebase Connected: TRUE");
-            } else {
-                console.warn("⚠️ Firebase Connected: FALSE (Check Database URL or Internet)");
-            }
-        });
-
-        updateStatus('processing', 'Ingesting...', 'Parsing and syncing to Cloud...');
+        # Bind the Python function to the Button Click
+        analysis_proxy = create_proxy(run_analysis)
+        document.getElementById("analyze-btn").addEventListener("click", analysis_proxy)
         
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                
-                let payload = {};
-                workbook.SheetNames.forEach(sheet => {
-                    payload[sheet] = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
-                });
-
-                // PUSH TO DB
-                console.log("Attempting Push to Firebase...");
-                const streamRef = db.ref('clinical_streams').push();
-                currentStreamKey = streamRef.key;
-                
-                await streamRef.set({
-                    meta_filename: file.name,
-                    upload_timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    status: "PENDING_REVIEW",
-                    data_payload: payload
-                });
-
-                console.log("Uploaded Key:", currentStreamKey);
-                updateStatus('processing', 'AI Agent Active', 'Waiting for intervention protocol...');
-                listenForAgent(currentStreamKey);
-
-            } catch (error) {
-                console.error("Upload Error Full:", error);
-                let msg = "Check Console (F12) for details.";
-                if (error.code === 'PERMISSION_DENIED') msg = "Database Rules prevent writing. Set .write: true in Console.";
-                updateStatus('error', 'Upload Failed', msg);
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
-    // --- 4. LISTENER ---
-    function listenForAgent(key) {
-        const ref = db.ref('clinical_streams/' + key);
-        ref.on('value', (snapshot) => {
-            const data = snapshot.val();
-            // Check if processed
-            if (data && data.status === "PROCESSED") {
-                updateStatus('success', 'Analysis Complete', 'Protocol Generated.');
-                
-                document.getElementById('agentResult').style.display = 'block';
-                document.getElementById('feedbackUI').style.display = 'flex';
-                document.getElementById('feedbackStatus').style.display = 'none';
-                
-                // Safe access to generated email
-                let text = "No text generated.";
-                if(data.agent_analysis && data.agent_analysis.generated_email) {
-                    text = data.agent_analysis.generated_email;
-                }
-                
-                const container = document.getElementById('agentText');
-                container.innerHTML = '';
-                
-                let i = 0;
-                function type() {
-                    if (i < text.length) {
-                        container.innerHTML += text.charAt(i);
-                        i++;
-                        setTimeout(type, 5);
-                    }
-                }
-                type();
-                ref.off('value'); // Stop listening once done
-            }
-        });
-    }
-
-    // --- 5. REWARD FUNCTION (USER FEEDBACK) ---
-    function submitReward(score) {
-        if (!currentStreamKey) return;
-        
-        // Write Feedback to DB
-        db.ref('clinical_streams/' + currentStreamKey).update({
-            user_feedback: score, // 1 = Good, 0 = Bad
-            feedback_timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-            document.getElementById('feedbackUI').style.display = 'none';
-            document.getElementById('feedbackStatus').style.display = 'block';
-            console.log("Reward Signal Sent:", score);
-        }).catch((e) => {
-            console.error("Feedback Error:", e);
-            alert("Could not send feedback.");
-        });
-    }
-
-    function updateStatus(type, title, desc) {
-        const card = document.getElementById('statusCard');
-        card.style.display = 'block';
-        card.className = `status-card ${type}`;
-        document.getElementById('statusTitle').innerText = title;
-        document.getElementById('statusDesc').innerText = desc;
-        
-        const icon = document.getElementById('statusIcon');
-        if (type === 'processing') icon.innerHTML = '<span class="spinner"></span>';
-        if (type === 'success') icon.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981; font-size:24px;"></i>';
-        if (type === 'error') icon.innerHTML = '<i class="fas fa-times-circle" style="color:#ef4444; font-size:24px;"></i>';
-    }
-</script>
-
+        # Start Loading
+        asyncio.ensure_future(load_models())
+    </py-script>
 </body>
 </html>
