@@ -8,7 +8,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- ONNX Runtime Web -->
+    <!-- ONNX Runtime Web (Removed defer to ensure availability for inline scripts) -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 
     <!-- PyScript (ETL Engine) -->
@@ -36,12 +36,12 @@
                         mist: "rgba(255,255,255,0.08)",
                     },
                     animation: {
-                        'fade-in-up': 'fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     },
                     keyframes: {
                         fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
                             '100%': { opacity: '1', transform: 'translateY(0)' },
                         }
                     }
@@ -83,7 +83,7 @@
         .reveal {
             opacity: 0;
             transform: translateY(30px);
-            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .reveal.active {
             opacity: 1;
@@ -93,7 +93,7 @@
         /* Dynamic Island Toast */
         .dynamic-island {
             transform: translateY(200%);
-            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .dynamic-island.show {
             transform: translateY(0);
@@ -154,7 +154,7 @@
         <div class="max-w-4xl text-center space-y-8 z-10">
             <div class="reveal active transition-delay-100">
                 <span class="text-[10px] font-bold tracking-widest uppercase text-titanium border border-white/20 px-3 py-1 rounded-full">
-                    Version 5.0
+                    Version 5.1
                 </span>
             </div>
             
@@ -273,7 +273,7 @@ onx = to_onnx(pipeline, X_train, target_opset=<span class="text-white">12</span>
 
     <!-- SECTION 4: DEMO (The Interface) -->
     <section id="demo" class="py-32 px-6 border-t border-white/10 bg-offblack relative">
-        <div class="max-w-4xl mx-auto">
+        <div class="max-w-3xl mx-auto">
             <div class="text-center mb-12 reveal">
                 <span class="font-mono text-titanium text-xs tracking-widest mb-4 block">LIVE ENVIRONMENT</span>
                 <h2 class="text-3xl font-semibold text-white">Execute Audit.</h2>
@@ -362,7 +362,10 @@ onx = to_onnx(pipeline, X_train, target_opset=<span class="text-white">12</span>
 
     <!-- LOGIC -->
     <script>
-        ort.env.logLevel = 'error';
+        // Safety check before setting log level
+        if (typeof ort !== 'undefined') {
+            ort.env.logLevel = 'error';
+        }
 
         // --- Scroll Observer ---
         const observer = new IntersectionObserver((entries) => {
@@ -390,28 +393,50 @@ onx = to_onnx(pipeline, X_train, target_opset=<span class="text-white">12</span>
 
         async function initModels() {
             try {
+                // Ensure ort is defined, retry if necessary (though removed defer should fix)
+                let ortRetries = 0;
+                while (typeof ort === 'undefined' && ortRetries < 20) {
+                    await new Promise(r => setTimeout(r, 100));
+                    ortRetries++;
+                }
+                
+                if (typeof ort === 'undefined') {
+                    console.error("ONNX Runtime failed to load");
+                    return;
+                }
+
                 const options = { executionProviders: ['wasm'] };
                 const load = async (path) => {
                     try { return await ort.InferenceSession.create(path, options); }
                     catch (e) { console.warn(`Using Mock for ${path}`); return null; }
                 };
 
-                // Parallel Load
-                [SESSIONS.numeric, SESSIONS.alphabet, SESSIONS.alphanum] = await Promise.all([
+                // 1. Parallel Load ONNX and Wait for Python
+                const onnxPromise = Promise.all([
                     load('./numeric.onnx'),
                     load('./alphabet.onnx'),
                     load('./alphanum.onnx')
                 ]);
 
-                // WAIT FOR PYTHON (New Check)
-                // We poll for the PyScript bridge proxy to ensure Python is actually ready
-                let retries = 0;
-                while (!window.process_excel_bridge && retries < 50) {
-                    await new Promise(r => setTimeout(r, 200));
-                    retries++;
-                }
+                // 2. Poll for Python Bridge aggressively (Every 50ms)
+                const pythonPromise = new Promise(async (resolve, reject) => {
+                    let retries = 0;
+                    // Max 60 seconds (1200 * 50ms)
+                    while (!window.process_excel_bridge && retries < 1200) {
+                        await new Promise(r => setTimeout(r, 50)); 
+                        retries++;
+                    }
+                    if (window.process_excel_bridge) resolve();
+                    else reject("Python Bridge Timeout");
+                });
 
-                // Ready State
+                // Wait for BOTH to complete
+                const [sessions, _] = await Promise.all([onnxPromise, pythonPromise]);
+                
+                // Assign Sessions
+                [SESSIONS.numeric, SESSIONS.alphabet, SESSIONS.alphanum] = sessions;
+
+                // --- STATE CHANGE: READY ---
                 document.getElementById('ready-toast').classList.add('show');
                 
                 const navCta = document.getElementById('nav-cta');
@@ -423,7 +448,11 @@ onx = to_onnx(pipeline, X_train, target_opset=<span class="text-white">12</span>
                 document.getElementById('status-display').classList.add('hidden');
                 document.getElementById('input-area').classList.remove('hidden');
 
-            } catch (e) { console.error("Init Failed", e); }
+            } catch (e) { 
+                console.error("Init Failed", e);
+                document.getElementById('loading-text').innerText = "BOOT FAILED: REFRESH REQUIRED";
+                document.getElementById('loading-text').classList.add('text-red-500');
+            }
         }
 
         function addToLog(message) {
@@ -565,7 +594,8 @@ Please acknowledge receipt.`;
             document.getElementById('intervention-text').innerText = email;
         }
 
-        window.addEventListener('load', initModels);
+        // Kick off initialization immediately (don't wait for load event)
+        initModels();
     </script>
 
     <!-- PYTHON ETL -->
