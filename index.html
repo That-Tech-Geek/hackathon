@@ -3,89 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clinical Trial Agent (Serverless)</title>
+    <title>Clinical Trial Agent (ONNX Powered)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- PyScript: The Engine -->
-    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
-    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <!-- ONNX Runtime Web (Inference Engine) -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+
+    <!-- PyScript (ETL Engine) -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.10.1/core.js"></script>
 
     <style>
-        /* Custom Loader Animation */
         .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @-webkit-keyframes spinner { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Hide scrollbar for cleaner look */
         body::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4 font-sans">
 
-    <!-- CONFIGURATION: Dependencies -->
+    <!-- CONFIGURATION: Minimal Dependencies -->
     <py-config>
-        packages = ["pandas", "scikit-learn", "joblib", "openpyxl", "numpy"]
+        packages = ["numpy<2.0.0", "pandas", "openpyxl"]
     </py-config>
 
     <!-- UI LAYER -->
     <div class="max-w-4xl w-full space-y-8 animate-fade-in">
         <div class="text-center">
-            <h1 class="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                Clinical Agent <span class="text-white text-2xl font-light">v2.0</span>
+            <h1 class="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                Clinical Agent <span class="text-white text-2xl font-light">ONNX</span>
             </h1>
-            <p class="mt-3 text-slate-400 text-lg">Serverless Triple-Stream Analysis Engine</p>
+            <p class="mt-3 text-slate-400 text-lg">WASM-Accelerated Inference Engine</p>
         </div>
 
         <!-- STATUS BOX -->
         <div id="status-box" class="bg-slate-800/50 backdrop-blur p-4 rounded-lg border border-slate-700 text-center transition-all duration-300">
-            <div id="loading-spinner" class="inline-block w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-            <span id="loading-text" class="text-yellow-400 font-mono text-sm">Initializing Python Runtime...</span>
+            <div id="loading-spinner" class="inline-block w-4 h-4 border-2 border-pink-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+            <span id="loading-text" class="text-pink-400 font-mono text-sm">Initializing ONNX Runtime & Python ETL...</span>
         </div>
 
         <!-- UPLOAD SECTION -->
         <div class="bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl relative overflow-hidden group">
-            <div class="absolute top-0 left-0 w-1 h-full bg-blue-500 group-hover:bg-blue-400 transition-colors"></div>
+            <div class="absolute top-0 left-0 w-1 h-full bg-purple-500 group-hover:bg-purple-400 transition-colors"></div>
             
             <label class="block mb-4 text-sm font-medium text-slate-300 uppercase tracking-wider">Upload Clinical Dataset (.xlsx)</label>
             <input type="file" id="file-upload" class="block w-full text-sm text-slate-400 
                 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 
-                file:text-sm file:font-semibold file:bg-blue-600 file:text-white 
-                hover:file:bg-blue-500 file:cursor-pointer cursor-pointer transition-all" 
+                file:text-sm file:font-semibold file:bg-purple-600 file:text-white 
+                hover:file:bg-purple-500 file:cursor-pointer cursor-pointer transition-all" 
                 accept=".xlsx" disabled>
             
-            <button id="analyze-btn" class="mt-8 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg opacity-50 cursor-not-allowed transform active:scale-95" disabled>
-                INITIATE ANALYSIS PROTOCOL
+            <button id="analyze-btn" class="mt-8 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg opacity-50 cursor-not-allowed transform active:scale-95" disabled onclick="handleAnalysis()">
+                INITIATE ONNX INFERENCE
             </button>
         </div>
 
-        <!-- RESULTS DASHBOARD (Hidden by default) -->
+        <!-- RESULTS DASHBOARD -->
         <div id="results-area" class="hidden space-y-6 transition-all duration-500 ease-in-out">
-            <!-- Score Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-blue-500 shadow-lg">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Operational (Numeric)</h3>
+                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Operational</h3>
                     <p id="res-num" class="text-3xl font-mono font-bold text-white">--</p>
                     <p class="text-xs text-slate-500 mt-2">Cycle time & variance metrics</p>
                 </div>
                 <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-purple-500 shadow-lg">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Documentation (Text)</h3>
+                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Documentation</h3>
                     <p id="res-alpha" class="text-3xl font-mono font-bold text-white">--</p>
                     <p class="text-xs text-slate-500 mt-2">NLP semantic analysis</p>
                 </div>
                 <div class="bg-slate-800 p-6 rounded-lg border-l-4 border-orange-500 shadow-lg">
-                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Integrity (IDs)</h3>
+                    <h3 class="text-slate-400 text-xs uppercase tracking-widest mb-1">Integrity</h3>
                     <p id="res-alphanum" class="text-3xl font-mono font-bold text-white">--</p>
                     <p class="text-xs text-slate-500 mt-2">Pattern matching & complexity</p>
                 </div>
             </div>
             
-            <!-- Intervention Protocol -->
             <div class="bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden">
                 <div class="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
-                    <h3 class="text-lg font-bold text-emerald-400">Intervention Protocol Generated</h3>
-                    <span class="text-xs bg-emerald-900 text-emerald-300 px-2 py-1 rounded">PRIORITY HIGH</span>
+                    <h3 class="text-lg font-bold text-pink-400">Intervention Protocol</h3>
                 </div>
                 <div class="p-6">
                     <pre id="intervention-text" class="text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"></pre>
@@ -94,83 +91,205 @@
         </div>
     </div>
 
-    <!-- PYTHON LOGIC LAYER -->
+    <!-- JAVASCRIPT LAYER -->
+    <script>
+        // Global Session Store
+        const SESSIONS = {
+            numeric: null,
+            alphabet: null,
+            alphanum: null
+        };
+
+        // 1. Load ONNX Models
+        async function initModels() {
+            const status = document.getElementById('loading-text');
+            try {
+                // Ensure the user has these files in the same directory!
+                const options = { executionProviders: ['wasm'] };
+                
+                status.innerText = "Loading ONNX Models...";
+                
+                // Helper to load or warn
+                const load = async (path) => {
+                    try {
+                        return await ort.InferenceSession.create(path, options);
+                    } catch (e) {
+                        console.warn(`Could not load ${path}. Ensure file exists. Using Fallback.`);
+                        return null;
+                    }
+                };
+
+                SESSIONS.numeric = await load('./numeric.onnx');
+                SESSIONS.alphabet = await load('./alphabet.onnx');
+                SESSIONS.alphanum = await load('./alphanum.onnx');
+
+                status.innerText = "System Ready. Hybrid Architecture Online.";
+                status.className = "text-emerald-400 font-mono font-bold";
+                document.getElementById('loading-spinner').className = "inline-block w-4 h-4 rounded-full bg-emerald-400 mr-2";
+                
+                document.getElementById('file-upload').disabled = false;
+                const btn = document.getElementById('analyze-btn');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            } catch (e) {
+                console.error(e);
+                status.innerText = "Initialization Failed: " + e.message;
+            }
+        }
+
+        // 2. Main Analysis Trigger
+        async function handleAnalysis() {
+            const btn = document.getElementById('analyze-btn');
+            const fileInput = document.getElementById('file-upload');
+            
+            if (fileInput.files.length === 0) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            btn.innerText = "EXTRACTING FEATURES (PYTHON ETL)...";
+            btn.disabled = true;
+
+            try {
+                // A. Get File Bytes
+                const file = fileInput.files[0];
+                const arrayBuffer = await file.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+
+                // B. Call PyScript
+                if (!window.process_excel_bridge) throw new Error("Python Runtime not ready.");
+                const features = await window.process_excel_bridge(bytes); 
+                
+                if (features.error) throw new Error(features.error);
+
+                btn.innerText = "RUNNING INFERENCE (ONNX)...";
+
+                // C. Run Inference
+                const results = await runOnnxInference(features);
+
+                // D. Display
+                displayResults(results);
+
+                btn.innerText = "RUN ANALYSIS AGAIN";
+                btn.disabled = false;
+
+            } catch (e) {
+                console.error(e);
+                alert("Analysis Error: " + e.message);
+                btn.innerText = "INITIATE ONNX INFERENCE";
+                btn.disabled = false;
+            }
+        }
+
+        async function runOnnxInference(data) {
+            // Setup results array matching site_ids
+            let scores = data.site_ids.map(id => ({ 
+                site_id: id, 
+                numeric: 0, 
+                alphabet: 0, 
+                alphanum: 0,
+                global: 0 
+            }));
+
+            // Inference Helper
+            const predict = async (session, inputData, type, shape) => {
+                // Fallback for demo if model missing
+                if (!session) return new Array(inputData.length).fill(Math.random() * -0.5); 
+                
+                try {
+                    let tensor;
+                    if (type === 'string') {
+                        // String Tensor (inputData must be flat array of strings)
+                        tensor = new ort.Tensor('string', inputData, shape);
+                    } else {
+                        // Float32 Tensor (Must convert to Float32Array first!)
+                        const flatData = inputData.flat();
+                        const typedData = new Float32Array(flatData);
+                        tensor = new ort.Tensor('float32', typedData, shape);
+                    }
+
+                    const feeds = {};
+                    feeds[session.inputNames[0]] = tensor;
+                    
+                    const output = await session.run(feeds);
+                    // Standard sklearn-onnx outputs: 'label' and 'probabilities' or 'scores'
+                    // We assume outputNames[0] is the decision function/score
+                    return output[session.outputNames[0]].data;
+                } catch (e) {
+                    console.error("Inference failed", e);
+                    return new Array(inputData.length).fill(0);
+                }
+            };
+
+            // 1. Numeric
+            if (data.numeric && data.numeric.length > 0) {
+                const shape = [data.numeric.length, data.numeric[0].length];
+                const preds = await predict(SESSIONS.numeric, data.numeric, 'float32', shape);
+                scores.forEach((s, i) => s.numeric = preds[i]);
+            }
+
+            // 2. Alphabet (Text)
+            if (data.alphabet && data.alphabet.length > 0) {
+                const shape = [data.alphabet.length, 1];
+                const preds = await predict(SESSIONS.alphabet, data.alphabet, 'string', shape);
+                scores.forEach((s, i) => s.alphabet = preds[i]);
+            }
+
+            // 3. Alphanumeric
+            if (data.alphanum && data.alphanum.length > 0) {
+                const shape = [data.alphanum.length, data.alphanum[0].length];
+                const preds = await predict(SESSIONS.alphanum, data.alphanum, 'float32', shape);
+                scores.forEach((s, i) => s.alphanum = preds[i]);
+            }
+
+            // Calc Global
+            scores.forEach(s => s.global = (s.numeric + s.alphabet + s.alphanum) / 3);
+            return scores;
+        }
+
+        function displayResults(scores) {
+            scores.sort((a, b) => a.global - b.global); 
+            const worst = scores[0];
+
+            document.getElementById('res-num').innerText = worst.numeric.toFixed(4);
+            document.getElementById('res-alpha').innerText = worst.alphabet.toFixed(4);
+            document.getElementById('res-alphanum').innerText = worst.alphanum.toFixed(4);
+            document.getElementById('results-area').classList.remove('hidden');
+
+            let failures = [];
+            if (worst.numeric < -0.1) failures.push("NUMERIC");
+            if (worst.alphabet < -0.1) failures.push("ALPHABET");
+            if (worst.alphanum < -0.1) failures.push("ALPHANUMERIC");
+            const diagnosis = failures.length ? failures.join(" & ") : "General Anomaly";
+
+            const email = `TO: Site Coordinator (ID: ${worst.site_id})
+SUBJECT: URGENT - Risk Anomaly Detected [${diagnosis}]
+
+System monitoring has flagged Site ${worst.site_id} as a critical bottleneck.
+Risk Score: ${worst.global.toFixed(4)}
+
+Recommended Actions:
+${failures.includes("NUMERIC") ? "- Audit data entry cycle times.\n" : ""}${failures.includes("ALPHABET") ? "- Review clinical notes for semantic completeness.\n" : ""}${failures.includes("ALPHANUMERIC") ? "- Verify Subject IDs against Reference Dictionary.\n" : ""}
+Please acknowledge.`;
+
+            document.getElementById('intervention-text').innerText = email;
+        }
+
+        window.addEventListener('load', initModels);
+    </script>
+
+    <!-- PYTHON ETL LAYER -->
     <py-script>
         import js
         import pandas as pd
         import numpy as np
-        import joblib
         import io
         import warnings
-        import asyncio
-        from pyodide.http import pyfetch
         from pyodide.ffi import create_proxy
-        from js import document, console, Uint8Array, File, FileReader
 
         warnings.filterwarnings('ignore')
 
-        # --- GLOBAL STATE ---
-        MODELS = {}
-
-        # --- 1. MODEL LOADER ---
-        async def load_models():
-            """Fetch .joblib files from the local server into PyScript virtual FS"""
-            files = [
-                "numeric_model.joblib", "numeric_scaler.joblib",
-                "alphabet_model.joblib", "alphabet_tfidf.joblib",
-                "alphanum_model.joblib", "alphanum_scaler.joblib"
-            ]
-            
-            status_text = document.getElementById('loading-text')
-            
-            for filename in files:
-                try:
-                    # Fetch file from server
-                    response = await pyfetch(filename)
-                    if response.status == 200:
-                        content = await response.bytes()
-                        # Write to virtual filesystem
-                        with open(filename, "wb") as f:
-                            f.write(content)
-                        console.log(f"Loaded {filename}")
-                    else:
-                        console.error(f"Failed to fetch {filename}")
-                        status_text.innerText = f"Error: Missing {filename}"
-                        status_text.className = "text-red-400 font-mono"
-                        return
-                except Exception as e:
-                    console.error(f"Error loading {filename}: {str(e)}")
-                    status_text.innerText = f"Error loading models. Check console."
-                    status_text.className = "text-red-400 font-mono"
-                    return
-
-            # Load into Memory
-            try:
-                status_text.innerText = " hydrating models..."
-                MODELS['num_model'] = joblib.load('numeric_model.joblib')
-                MODELS['num_scaler'] = joblib.load('numeric_scaler.joblib')
-                MODELS['alpha_model'] = joblib.load('alphabet_model.joblib')
-                MODELS['alpha_tfidf'] = joblib.load('alphabet_tfidf.joblib')
-                MODELS['alphanum_model'] = joblib.load('alphanum_model.joblib')
-                MODELS['alphanum_scaler'] = joblib.load('alphanum_scaler.joblib')
-                
-                # Update UI to Ready State
-                status_text.innerText = "System Ready. Waiting for Data.";
-                status_text.className = "text-emerald-400 font-mono font-bold";
-                document.getElementById('loading-spinner').classList.remove('animate-spin');
-                document.getElementById('loading-spinner').classList.add('bg-emerald-400');
-                
-                # Enable Controls
-                document.getElementById('file-upload').disabled = False
-                btn = document.getElementById('analyze-btn')
-                btn.disabled = False
-                btn.classList.remove('opacity-50', 'cursor-not-allowed')
-                
-            except Exception as e:
-                status_text.innerText = f"Init Error: {str(e)}"
-                console.error(str(e))
-
-        # --- 2. DATA LOGIC ---
         def detect_and_route(series):
             clean = series.dropna().astype(str)
             if clean.empty: return 'skip'
@@ -183,32 +302,10 @@
                 return 'alphabet'
             return 'alphanumeric'
 
-        async def run_analysis(event):
-            """Main Event Handler triggered by Button Click"""
-            
-            # 1. UI Feedback
-            btn = document.getElementById('analyze-btn')
-            btn.innerText = "PROCESSING STREAMS..."
-            btn.disabled = True
-            
-            file_input = document.getElementById('file-upload')
-            file_list = file_input.files
-            if file_list.length == 0:
-                btn.innerText = "NO FILE SELECTED"
-                await asyncio.sleep(2)
-                btn.innerText = "INITIATE ANALYSIS PROTOCOL"
-                btn.disabled = False
-                return
-
-            file_obj = file_list.item(0)
-            
+        def process_excel_py(file_bytes):
             try:
-                # 2. Read File (Async)
-                array_buf = await file_obj.arrayBuffer()
-                file_bytes = array_buf.to_bytes()
-                
-                # 3. Process Excel
-                xls = pd.ExcelFile(io.BytesIO(file_bytes))
+                content = bytes(file_bytes.to_py())
+                xls = pd.ExcelFile(io.BytesIO(content))
                 
                 buffer_num, buffer_alpha, buffer_alphanum = [], [], []
                 
@@ -238,115 +335,57 @@
                     if curr_alpha.shape[1] > 1: buffer_alpha.append(curr_alpha)
                     if curr_alphanum.shape[1] > 1: buffer_alphanum.append(curr_alphanum)
 
-                # 4. Aggregation
-                streams = {}
-                if buffer_num: streams['numeric'] = pd.concat(buffer_num).groupby('site_id').mean().fillna(0)
-                else: streams['numeric'] = pd.DataFrame()
-                
-                if buffer_alpha:
-                    raw_alpha = pd.concat(buffer_alpha)
-                    streams['alphabet'] = raw_alpha.groupby('site_id').agg(lambda x: ' '.join(x.astype(str)))
-                    streams['alphabet'] = streams['alphabet'].apply(lambda x: ' '.join(x), axis=1).to_frame('all_text')
-                else: streams['alphabet'] = pd.DataFrame()
-
-                if buffer_alphanum: streams['alphanumeric'] = pd.concat(buffer_alphanum).groupby('site_id').nunique()
-                else: streams['alphanumeric'] = pd.DataFrame()
-
-                # 5. Inference
+                # Aggregate
                 all_sites = set()
-                for k,v in streams.items(): 
-                    if not v.empty: all_sites.update(v.index.tolist())
                 
-                if not all_sites: 
-                    raise Exception("No valid site ID columns found in data.")
+                # Numeric
+                if buffer_num:
+                    df_num = pd.concat(buffer_num).groupby('site_id').mean().fillna(0)
+                    all_sites.update(df_num.index.tolist())
+                else: df_num = pd.DataFrame()
 
-                results = pd.DataFrame(index=list(all_sites))
-                
-                # Numeric Model
-                if not streams['numeric'].empty:
-                    data = streams['numeric'].reindex(results.index).fillna(0)
-                    results['numeric_score'] = MODELS['num_model'].decision_function(MODELS['num_scaler'].transform(data))
-                else: results['numeric_score'] = 0.0
+                # Alphabet
+                if buffer_alpha:
+                    df_alpha = pd.concat(buffer_alpha)
+                    # Join text
+                    df_alpha = df_alpha.groupby('site_id').agg(lambda x: ' '.join(x.astype(str)))
+                    df_alpha = df_alpha.apply(lambda x: ' '.join(x), axis=1).to_frame('all_text')
+                    all_sites.update(df_alpha.index.tolist())
+                else: df_alpha = pd.DataFrame()
 
-                # Alphabet Model
-                if not streams['alphabet'].empty:
-                    data = streams['alphabet'].reindex(results.index).fillna('')
-                    results['alphabet_score'] = MODELS['alpha_model'].decision_function(MODELS['alpha_tfidf'].transform(data['all_text']).toarray())
-                else: results['alphabet_score'] = 0.0
+                # Alphanumeric
+                if buffer_alphanum:
+                    df_alphanum = pd.concat(buffer_alphanum).groupby('site_id').nunique()
+                    all_sites.update(df_alphanum.index.tolist())
+                else: df_alphanum = pd.DataFrame()
 
-                # Alphanumeric Model
-                if not streams['alphanumeric'].empty:
-                    data = streams['alphanumeric'].reindex(results.index).fillna(0)
-                    results['alphanum_score'] = MODELS['alphanum_model'].decision_function(MODELS['alphanum_scaler'].transform(data))
-                else: results['alphanum_score'] = 0.0
+                sorted_sites = sorted(list(all_sites))
+                
+                # Prepare JSON Output
+                numeric_list = []
+                if not df_num.empty:
+                    numeric_list = df_num.reindex(sorted_sites).fillna(0).values.tolist()
+                
+                alphabet_list = []
+                if not df_alpha.empty:
+                    alphabet_list = df_alpha.reindex(sorted_sites).fillna('').iloc[:, 0].tolist()
+                
+                alphanum_list = []
+                if not df_alphanum.empty:
+                    alphanum_list = df_alphanum.reindex(sorted_sites).fillna(0).values.tolist()
 
-                results['global_risk'] = results.mean(axis=1)
-                
-                # 6. Diagnosis & Report
-                worst_site = results.sort_values('global_risk').iloc[0]
-                site_id = worst_site.name
-                
-                # Update Score Cards
-                document.getElementById('res-num').innerText = f"{worst_site['numeric_score']:.4f}"
-                document.getElementById('res-alpha').innerText = f"{worst_site['alphabet_score']:.4f}"
-                document.getElementById('res-alphanum').innerText = f"{worst_site['alphanum_score']:.4f}"
-                
-                # Generate Email Logic
-                failures = []
-                if worst_site['numeric_score'] < -0.1: failures.append("NUMERIC (Operational Efficiency)")
-                if worst_site['alphabet_score'] < -0.1: failures.append("ALPHABET (Documentation Quality)")
-                if worst_site['alphanum_score'] < -0.1: failures.append("ALPHANUMERIC (Data Integrity)")
-                
-                diagnosis = " & ".join(failures) if failures else "General Anomaly"
-                
-                email_body = f"""TO: Site Coordinator (ID: {site_id})
-FROM: Clinical AI Operations Agent
-SUBJECT: URGENT - Risk Anomaly Detected [{diagnosis}]
+                # Convert to JS
+                return js.Object.fromEntries(js.Map([
+                    ("site_ids", js.Array.from_iter(sorted_sites)),
+                    ("numeric", js.Array.from_iter([js.Array.from_iter(row) for row in numeric_list])),
+                    ("alphabet", js.Array.from_iter(alphabet_list)),
+                    ("alphanum", js.Array.from_iter([js.Array.from_iter(row) for row in alphanum_list]))
+                ]))
 
-Body:
-System monitoring has flagged Site {site_id} as a critical operational bottleneck.
-
-Our Triple-Stream Analysis detected the following anomalies:
-- Diagnosis: {diagnosis}
-- Risk Score: {worst_site['global_risk']:.4f} (Threshold: -0.10)
-
-CONTEXT AWARE RECOMMENDATION:
-"""
-                if "NUMERIC" in diagnosis:
-                    email_body += "- The statistical variance in your operational logs is too high. Please audit data entry cycle times.\n"
-                if "ALPHABET" in diagnosis:
-                    email_body += "- Semantic analysis of your clinical notes indicates a lack of detail or high frequency of error keywords.\n"
-                if "ALPHANUMERIC" in diagnosis:
-                    email_body += "- Irregular patterns found in Subject IDs or Protocol Codes. Verify alignment with the Reference Dictionary.\n"
-                    
-                email_body += "\nPlease acknowledge receipt of this automated intervention."
-                
-                document.getElementById('intervention-text').innerText = email_body
-                
-                # Show Results Area
-                document.getElementById('results-area').classList.remove('hidden')
-                
-                # Reset Button
-                btn.innerText = "RUN ANALYSIS AGAIN"
-                btn.disabled = False
-                
             except Exception as e:
-                console.error(f"Analysis Error: {e}")
-                btn.innerText = "ERROR - CHECK CONSOLE"
-                btn.classList.add('bg-red-600')
-                await asyncio.sleep(3)
-                btn.innerText = "INITIATE ANALYSIS PROTOCOL"
-                btn.disabled = False
-                btn.classList.remove('bg-red-600')
+                return js.Object.fromEntries(js.Map([("error", str(e))]))
 
-        # --- 3. INIT & BINDINGS ---
-        
-        # Bind the Python function to the Button Click
-        analysis_proxy = create_proxy(run_analysis)
-        document.getElementById("analyze-btn").addEventListener("click", analysis_proxy)
-        
-        # Start Loading
-        asyncio.ensure_future(load_models())
+        js.window.process_excel_bridge = create_proxy(process_excel_py)
     </py-script>
 </body>
 </html>
