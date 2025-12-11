@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>hAIlth - Command Center</title>
     
-    <!-- 1. FIREBASE SDKs (Compat version for rapid prototyping) -->
+    <!-- 1. FIREBASE SDKs (Compat version for Realtime DB) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <!-- Note: Firestore SDK removed, Database SDK added -->
     
     <!-- 2. SHEETJS (Parses Excel in browser) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -185,21 +186,23 @@
 </div>
 
 <script>
-    // --- 1. CONFIGURATION (REPLACE THIS WITH YOUR FIREBASE CONFIG) ---
+    // --- 1. CONFIGURATION ---
     const firebaseConfig = {
-        apiKey: "REPLACE_WITH_YOUR_API_KEY",
-        authDomain: "REPLACE_WITH_YOUR_PROJECT_ID.firebaseapp.com",
-        projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-        storageBucket: "REPLACE_WITH_YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "REPLACE_WITH_SENDER_ID",
-        appId: "REPLACE_WITH_APP_ID"
+        apiKey: "AIzaSyCOrb15cWf-0j4q3EYmpgChVIANQh-Eok0", // <--- Still need this
+        authDomain: "hackathons-8f113.firebaseapp.com",
+        databaseURL: "https://hackathons-8f113-default-rtdb.firebaseio.com/", // <--- YOUR NEW URL
+        projectId: "hackathons-8f113",
+        storageBucket: "hackathons-8f113.firebasestorage.app",
+        messagingSenderId: "682635562372",
+        appId: "1:682635562372:web:e5cac66a90f5fce2a5e1d1"
     };
 
     // Initialize Firebase
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    const db = firebase.firestore();
+    // SWITCH TO REALTIME DATABASE
+    const db = firebase.database();
 
     // --- 2. DRAG & DROP LOGIC ---
     const dropZone = document.getElementById('dropZone');
@@ -227,7 +230,7 @@
         }
     });
 
-    // --- 3. EXCEL PARSING & UPLOAD ---
+    // --- 3. EXCEL PARSING & UPLOAD (REALTIME DB) ---
     async function processFile(file) {
         // UI Update: Processing
         const card = document.getElementById('statusCard');
@@ -236,7 +239,7 @@
         
         document.getElementById('statusIcon').innerHTML = '<span class="spinner"></span>';
         document.getElementById('statusTitle').innerText = 'Ingesting Data Stream...';
-        document.getElementById('statusDesc').innerText = 'Parsing Excel sheets and synchronizing with Cloud...';
+        document.getElementById('statusDesc').innerText = 'Parsing Excel sheets and synchronizing with Realtime DB...';
         
         // Hide previous results
         document.getElementById('agentResult').style.display = 'none';
@@ -247,7 +250,7 @@
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             
-            // Build the Payload (Matching Python Script Logic)
+            // Build the Payload
             let payload = {};
             workbook.SheetNames.forEach(sheetName => {
                 const worksheet = workbook.Sheets[sheetName];
@@ -255,29 +258,31 @@
                 payload[sheetName] = XLSX.utils.sheet_to_json(worksheet);
             });
 
-            // Upload to Firestore
+            // Upload to REALTIME DATABASE (db.ref instead of collection)
             try {
-                const docRef = await db.collection('clinical_streams').add({
+                const streamRef = db.ref('clinical_streams').push();
+                
+                await streamRef.set({
                     meta_filename: file.name,
-                    upload_timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    upload_timestamp: firebase.database.ServerValue.TIMESTAMP,
                     status: "PENDING_REVIEW", // This triggers the Python Agent
                     data_payload: payload
                 });
 
-                console.log("Document written with ID: ", docRef.id);
+                console.log("Data pushed with Key: ", streamRef.key);
                 
                 // Update UI: Waiting for AI
                 document.getElementById('statusTitle').innerText = 'AI Agent Active';
                 document.getElementById('statusDesc').innerText = 'Triple-Stream Analysis in progress. Waiting for intervention...';
                 
-                // START LISTENING FOR RESPONSE
-                listenForAgent(docRef.id);
+                // START LISTENING FOR RESPONSE (REALTIME DB)
+                listenForAgent(streamRef.key);
 
             } catch (error) {
-                console.error("Error adding document: ", error);
+                console.error("Error pushing data: ", error);
                 document.getElementById('statusCard').className = 'status-card';
                 document.getElementById('statusTitle').innerText = 'Upload Failed';
-                document.getElementById('statusDesc').innerText = 'Check console for permission errors.';
+                document.getElementById('statusDesc').innerText = 'Check console for permission/config errors.';
                 document.getElementById('statusIcon').innerHTML = '<i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 24px;"></i>';
             }
         };
@@ -285,45 +290,47 @@
         reader.readAsArrayBuffer(file);
     }
 
-    // --- 4. REAL-TIME LISTENER (The Magic) ---
-    function listenForAgent(docId) {
-        const unsubscribe = db.collection("clinical_streams").doc(docId)
-            .onSnapshot((doc) => {
-                const data = doc.data();
+    // --- 4. REAL-TIME LISTENER (REALTIME DB) ---
+    function listenForAgent(streamKey) {
+        const streamRef = db.ref('clinical_streams/' + streamKey);
+        
+        // Use 'value' listener for Realtime DB
+        const listener = streamRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            
+            // Check if status changed to PROCESSED
+            if (data && data.status === "PROCESSED" && data.agent_analysis) {
                 
-                // Check if status changed to PROCESSED
-                if (data && data.status === "PROCESSED" && data.agent_analysis) {
-                    
-                    // UI Success State
-                    document.getElementById('statusCard').className = 'status-card success';
-                    document.getElementById('statusIcon').innerHTML = '<i class="fas fa-check-circle" style="color: #10b981; font-size: 24px;"></i>';
-                    document.getElementById('statusTitle').innerText = 'Analysis Complete';
-                    document.getElementById('statusDesc').innerText = 'Intervention Protocol Generated.';
-                    
-                    // Show the Email
-                    const agentBox = document.getElementById('agentResult');
-                    agentBox.style.display = 'block';
-                    agentBox.style.animation = 'fadeIn 1s';
-                    
-                    // Typewriter Effect for realism
-                    const text = data.agent_analysis.generated_email;
-                    const textContainer = document.getElementById('agentText');
-                    textContainer.innerHTML = ''; // Clear previous
-                    
-                    let i = 0;
-                    function typeWriter() {
-                        if (i < text.length) {
-                            textContainer.innerHTML += text.charAt(i);
-                            i++;
-                            setTimeout(typeWriter, 5); // Speed of typing
-                        }
+                // UI Success State
+                document.getElementById('statusCard').className = 'status-card success';
+                document.getElementById('statusIcon').innerHTML = '<i class="fas fa-check-circle" style="color: #10b981; font-size: 24px;"></i>';
+                document.getElementById('statusTitle').innerText = 'Analysis Complete';
+                document.getElementById('statusDesc').innerText = 'Intervention Protocol Generated.';
+                
+                // Show the Email
+                const agentBox = document.getElementById('agentResult');
+                agentBox.style.display = 'block';
+                agentBox.style.animation = 'fadeIn 1s';
+                
+                // Typewriter Effect
+                const text = data.agent_analysis.generated_email;
+                const textContainer = document.getElementById('agentText');
+                textContainer.innerHTML = ''; // Clear previous
+                
+                let i = 0;
+                function typeWriter() {
+                    if (i < text.length) {
+                        textContainer.innerHTML += text.charAt(i);
+                        i++;
+                        setTimeout(typeWriter, 5);
                     }
-                    typeWriter();
-                    
-                    // Stop listening once processed to save resources
-                    unsubscribe();
                 }
-            });
+                typeWriter();
+                
+                // Detach listener
+                streamRef.off('value', listener);
+            }
+        });
     }
 </script>
 
